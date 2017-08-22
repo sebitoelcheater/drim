@@ -1,0 +1,54 @@
+# Add this snippet to the top of your playbook.
+# It will install python2 if missing (but checks first so no expensive repeated apt updates)
+# gwillem@gmail.com
+# This fixed the publickey error raised by digitalocean:
+# Maybe was because of defining a host with unexistant user
+- hosts: digitalocean_root
+  gather_facts: False
+  tasks:
+  - name: install python 2
+    raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+- name: Create
+  hosts: digitalocean_root
+  vars_files:
+    - .keys/vars.yml
+  tasks:
+    - name: Create users
+      user:
+        name: "{{item.name}}"
+        password: "{{item.encrypted_password}}"
+        group: "{{item.group}}"
+        shell: /bin/bash
+        generate_ssh_key: yes
+      with_items: "{{ users }}"
+    - name: Add new users to the sudo group
+      shell: "usermod -aG sudo {{ item.name }}"
+      with_items: "{{ users }}"
+    - name: Set authorized keys for connecting to host with new users
+      authorized_key:
+        user: "{{item.name}}"
+        state: present
+        key: "{{ lookup('file', '.keys/key.pub') }}"
+      become_user: "{{item.name}}"
+      with_items: "{{users}}"
+    - name: Add a host for each user to ansible hosts inventory file
+      add_host:
+        name: "{{ host_info.ip }}"
+        groups: digitalocean
+        ansible_ssh_private_key_file: "{{host_info.ansible_ssh_private_key_file}}"
+        ansible_ssh_user: "{{item.name}}"
+        ansible_sudo_pass: "{{item.password}}"
+      with_items: "{{users}}"
+- name: Save new users in inventory "hosts.yml" file
+  hosts: localhost
+  tasks:
+    - name: "Build hosts file"
+      lineinfile:
+        dest: "{{inventory_file}}"
+        regexp: '.*{{ item }}$'
+        line: "{{item}}
+        ansible_ssh_private_key_file={{hostvars[item].ansible_ssh_private_key_file}}
+        ansible_sudo_pass={{hostvars[item].ansible_sudo_pass}}
+        ansible_ssh_user={{hostvars[item].ansible_ssh_user}}"
+        state: present
+      with_items: "{{groups.digitalocean}}"
