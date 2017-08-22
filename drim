@@ -1,0 +1,25 @@
+#!/bin/bash
+# My first script
+
+drim_path=$HOME/Developer/Proyectos/drim
+project_path=${PWD}
+platform=$1
+action=$2
+
+if [ "$platform" == "digitalocean" ]; then
+  if [ "$action" == "deploy" ]; then
+    ansible-playbook $drim_path/digitalocean/deploy.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  elif [ "$action" == "initialize" ]; then
+    ansible-playbook $drim_path/digitalocean/initialize.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  elif [ "$action" == "create" ]; then
+    ansible-playbook $drim_path/digitalocean/create.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  fi
+elif [ "$platform" == "ionic" ]; then
+  if [ "$action" == "deploy" ]; then
+    ansible-playbook $drim_path/ionic/deploy.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  elif [ "$action" == "initialize" ]; then
+    ansible-playbook $drim_path/ionic/initialize.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  elif [ "$action" == "create" ]; then
+    ansible-playbook $drim_path/ionic/create.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  fi
+fi
