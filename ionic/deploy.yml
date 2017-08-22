@@ -1,0 +1,19 @@
+- name: Prepare app for publishing
+  hosts: localhost
+  connection: local
+  vars:
+    ansible_python_interpreter: /Users/sebito/.virtualenvs/ansible/bin/python
+  tasks:
+    - block:
+        #- include: deploy/prepare.yml
+        - name: Include credentials
+          include_vars: "{{PROJECT_PATH}}/.drim/credentials.yml"
+        - shell: source ~/.zshrc
+        - debug: var=python_version
+        - include: platforms/android.yml
+          when: platforms.android.present is defined and platforms.android.present
+        - include: platforms/browser.yml
+          when: platforms.browser.present is defined and platforms.browser.present
+      always:
+        - name: Save created stuff info
+          command: echo "ok"

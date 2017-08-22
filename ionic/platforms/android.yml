@@ -1,0 +1,38 @@
+- name: Remove cordova-plugin-console if installed
+  shell:
+    cmd: ionic cordova plugin rm cordova-plugin-console
+    chdir: "{{PROJECT_PATH}}"
+  ignore_errors: yes
+- name: Build APK
+  shell:
+    cmd: ionic cordova build --release android
+    chdir: "{{PROJECT_PATH}}"
+- name: Check that the keystore file exists
+  stat:
+    path: "{{platforms.android.keystore.path}}"
+  register: stat_result
+- name: If the Keystore doesnt exists, kill execution
+  fail: msg="Por favor crea el Keystore"
+  when: stat_result.stat.exists == False
+- name: Generate private key if not exists
+  shell:
+    cmd: "keytool -genkey -v -keystore {{platforms.android.keystore.path}}
+    -alias {{ app_name }}_key -keyalg RSA -keysize 2048 -validity 10000"
+    chdir: "{{PROJECT_PATH}}"
+  when: stat_result.stat.exists == False
+- name: Sign unsigned APK
+  expect:
+    command: "jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1
+    -keystore {{platforms.android.keystore.path}}
+    {{PROJECT_PATH}}/platforms/android/build/outputs/apk/android-release-unsigned.apk
+    {{ app_name }}_key"
+    responses:
+      'Enter Passphrase for keystore: ': "{{platforms.android.keystore.password}}"
+- name: Remove old APK
+  command: "rm {{PROJECT_PATH}}/{{ app_name }}.apk"
+  ignore_errors: yes
+- name: Optimize APK
+  shell:
+    cmd: "~/Library/Android/sdk/build-tools/26.0.1/zipalign -v 4
+    platforms/android/build/outputs/apk/android-release-unsigned.apk {{ app_name }}.apk"
+    chdir: "{{PROJECT_PATH}}"

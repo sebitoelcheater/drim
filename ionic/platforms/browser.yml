@@ -1,0 +1,14 @@
+- name: Remove cordova-plugin-console if installed
+  shell:
+    cmd: ionic cordova plugin rm cordova-plugin-console
+    chdir: "{{PROJECT_PATH}}"
+  ignore_errors: yes
+- name: Build Borwser folder
+  shell:
+    cmd: ionic cordova build --release browser
+    chdir: "{{PROJECT_PATH}}"
+- name: Delete old projects folder from server
+  command: "ssh -i {{platforms.browser.private_key}} {{platforms.browser.user}}@{{platforms.browser.ip}} 'rm -r ~/{{app_name}}'"
+  ignore_errors: yes
+- name: Upload project to server
+  command: "scp -r -i {{platforms.browser.private_key}} {{PROJECT_PATH}}/platforms/browser/www/ {{platforms.browser.user}}@{{platforms.browser.ip}}:~/{{app_name}}"
