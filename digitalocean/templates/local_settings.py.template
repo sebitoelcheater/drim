@@ -1,0 +1,41 @@
+DEBUG = False
+
+STATICFILES_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = '{{name}} <contacto@{{name}}.cl>'
+BASE_URL = "{{host_info.ip}}"
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': '{{databases.postgresql.0.database}}',
+        'USER': '{{databases.postgresql.0.user}}',
+        'PASSWORD': '{{databases.postgresql.0.password}}',
+        'HOST': '{{databases.postgresql.0.host}}',
+        'PORT': '',
+    }
+}
+
+AWS_STORAGE_BUCKET_NAME = "{{aws.STORAGE_BUCKET_NAME}}"
+AWS_ACCESS_KEY_ID = "{{aws.ACCESS_KEY_ID}}"
+AWS_SECRET_ACCESS_KEY = "{{aws.SECRET_ACCESS_KEY}}"
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+STATIC_URL = "http://%s/" % AWS_S3_CUSTOM_DOMAIN
+MEDIA_URL = "https://%s/" % AWS_S3_CUSTOM_DOMAIN
+ADMIN_MEDIA_PREFIX = STATIC_URL + 'admin/'
+EMAIL_HOST_USER = "{{sendgrid.username}}"
+EMAIL_HOST_PASSWORD = "{{sendgrid.password}}"
+MAP_WIDGETS = {
+    "GooglePointFieldWidget": (
+        ("zoom", 15),
+        ("mapCenterLocationName", "santiago"),
+        ("GooglePlaceAutocompleteOptions",
+         {'componentRestrictions': {'country': 'cl'}}),
+        ("markerFitZoom", 12),
+    ),
+    "GOOGLE_MAP_API_KEY": "{{google_maps.api_key}}",
+}
+
+ALLOWED_HOSTS = ['*']

@@ -1,0 +1,93 @@
+# Assuming this previous steps:
+# Run digitalocean/initialize.yml
+# Create ssh key and add to github
+# Create and clone repository in github
+- name: Set Django project with heroku
+  vars_files:
+    - .keys/vars.yml
+  vars:
+    libs:
+      - binutils
+      - libproj-dev
+      - gdal-bin
+      - python3-pip
+      - python3-dev
+      - libpq-dev
+      - postgresql
+      - postgresql-contrib
+      - nginx
+      - postgis
+    python_libs:
+      - django
+      - gunicorn
+      - psycopg2
+  hosts: digitalocean
+  become: true
+  tasks:
+    - name: Update
+      shell: sudo apt-get update
+    - name:
+      apt:
+        name: "{{item}}"
+        state: present
+      with_items: "{{libs}}"
+    - name: Create database
+      shell: "sudo -u postgres psql -c \"CREATE DATABASE {{item.database}};\""
+      with_items: "{{databases.postgresql}}"
+      when: False
+    - name: Create user and grant privileges on postgresql database
+      command: "sudo -u postgres psql -c \"CREATE USER {{item.user}} WITH PASSWORD '{{item.password}}';
+        ALTER ROLE {{item.user}} SET client_encoding TO 'utf8';
+        ALTER ROLE {{item.user}} SET default_transaction_isolation TO 'read committed';
+        ALTER ROLE {{item.user}} SET timezone TO 'UTC';
+        GRANT ALL PRIVILEGES ON DATABASE {{item.database}} TO {{item.user}};\""
+      with_items: "{{databases.postgresql}}"
+      when: False
+    - name: install postgis extension
+      command: "sudo -u postgres psql {{item.database}} -c \"CREATE EXTENSION postgis;\""
+      when: False
+      with_items: "{{databases.postgresql}}"
+    - name: Save local_settings
+      template:
+        src: "templates/local_settings.py.template"
+        dest: "{{project_folder}}/{{name}}/local_settings.py"
+    - name: update pip
+      shell: sudo -H pip3 install --upgrade pip
+    - name: install virtualenv
+      shell: sudo -H pip3 install virtualenv
+    - name: Install requirements
+      pip:
+        requirements: "{{project_folder}}/requirements.txt"
+        virtualenv: "{{project_folder}}/venv"
+        virtualenv_python: python3
+    - name: Install requirements
+      pip:
+        requirements: "{{project_folder}}/requirements.txt"
+        virtualenv: "{{project_folder}}/venv"
+    - name: Create an exception for port 8000
+      shell: ufw allow 8000; ufw allow 8082;
+    - pip:
+        name: "{{item}}"
+      with_items: "{{python_libs}}"
+    - name: gunicorn template
+      template:
+        src: "templates/gunicorn.service.template"
+        dest: "/etc/systemd/system/gunicorn.service"
+    - name: start gunicorn
+      shell: systemctl start gunicorn
+    - name: enable gunicorn
+      shell: systemctl enable gunicorn
+    - name: nginx template
+      template:
+        src: "templates/nginx.template"
+        dest: "/etc/nginx/sites-available/{{name}}"
+    - name: link to sites-enabled
+      shell: ln -s /etc/nginx/sites-available/{{name}} /etc/nginx/sites-enabled
+    - name: restart nginx
+      shell: systemctl restart nginx
+    - name: open firewall
+      shell: ufw delete allow 8000
+    - name: firewall
+      shell: ufw allow 'Nginx Full'
+    - name: restart
+      shell: sudo systemctl daemon-reload;sudo systemctl restart gunicorn;sudo systemctl restart nginx

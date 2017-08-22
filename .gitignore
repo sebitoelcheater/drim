@@ -1,0 +1,9 @@
+*.DS_Store
+*.retry
+*.DS_Store
+*hosts.yml
+
+# do not ignore .keep
+!digitalocean/.keys
+digitalocean/.keys/*
+!digitalocean/.keys/.keep
