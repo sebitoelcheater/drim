@@ -6,7 +6,7 @@ EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = '{{name}} <contacto@{{name}}.cl>'
-BASE_URL = "{{host_info.ip}}"
+BASE_URL = "{{hostvars[groups.digitalocean_root.0].name}}"
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
@@ -39,3 +39,9 @@ MAP_WIDGETS = {
 }
 
 ALLOWED_HOSTS = ['*']
+
+TRACCAR = {
+    "api": "http://{{traccar.server_address}}:8082/api",
+    "user": "{{traccar.username}}",
+    "password": "{{traccar.password}}",
+}

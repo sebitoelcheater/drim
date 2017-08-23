@@ -3,8 +3,6 @@
 # Create ssh key and add to github
 # Create and clone repository in github
 - name: Set Django project with heroku
-  vars_files:
-    - .keys/vars.yml
   vars:
     libs:
       - binutils
@@ -17,13 +15,21 @@
       - postgresql-contrib
       - nginx
       - postgis
+      # # mysql
+      # - python-pip
+      # - python-dev
+      # - mysql-server
+      # - libmysqlclient-dev
+      # - python-mysqldb
     python_libs:
       - django
       - gunicorn
       - psycopg2
-  hosts: digitalocean
+  hosts: digitaloceanss
   become: true
   tasks:
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
     - name: Update
       shell: sudo apt-get update
     - name:
@@ -36,7 +42,8 @@
       with_items: "{{databases.postgresql}}"
       when: False
     - name: Create user and grant privileges on postgresql database
-      command: "sudo -u postgres psql -c \"CREATE USER {{item.user}} WITH PASSWORD '{{item.password}}';
+      command: "sudo -u postgres psql -c \"
+        CREATE USER {{item.user}} WITH PASSWORD '{{item.password}}';
         ALTER ROLE {{item.user}} SET client_encoding TO 'utf8';
         ALTER ROLE {{item.user}} SET default_transaction_isolation TO 'read committed';
         ALTER ROLE {{item.user}} SET timezone TO 'UTC';
@@ -45,31 +52,19 @@
       when: False
     - name: install postgis extension
       command: "sudo -u postgres psql {{item.database}} -c \"CREATE EXTENSION postgis;\""
-      when: False
       with_items: "{{databases.postgresql}}"
-    - name: Save local_settings
-      template:
-        src: "templates/local_settings.py.template"
-        dest: "{{project_folder}}/{{name}}/local_settings.py"
+      when: False
     - name: update pip
       shell: sudo -H pip3 install --upgrade pip
     - name: install virtualenv
       shell: sudo -H pip3 install virtualenv
-    - name: Install requirements
-      pip:
-        requirements: "{{project_folder}}/requirements.txt"
-        virtualenv: "{{project_folder}}/venv"
-        virtualenv_python: python3
-    - name: Install requirements
-      pip:
-        requirements: "{{project_folder}}/requirements.txt"
-        virtualenv: "{{project_folder}}/venv"
     - name: Create an exception for port 8000
       shell: ufw allow 8000; ufw allow 8082;
-    - pip:
+    - name: Install important python libs
+      pip:
         name: "{{item}}"
       with_items: "{{python_libs}}"
-    - name: gunicorn template
+    - name: Create gunicorn template file
       template:
         src: "templates/gunicorn.service.template"
         dest: "/etc/systemd/system/gunicorn.service"
@@ -77,7 +72,7 @@
       shell: systemctl start gunicorn
     - name: enable gunicorn
       shell: systemctl enable gunicorn
-    - name: nginx template
+    - name: Create nginx configuration file
       template:
         src: "templates/nginx.template"
         dest: "/etc/nginx/sites-available/{{name}}"
@@ -91,3 +86,29 @@
       shell: ufw allow 'Nginx Full'
     - name: restart
       shell: sudo systemctl daemon-reload;sudo systemctl restart gunicorn;sudo systemctl restart nginx
+# Assuming this previous steps:
+# Run digitalocean/initialize.yml
+# Create ssh key and add to github
+# Create and clone repository in github
+- name: Clone repository
+  hosts: digitalocean
+  tasks:
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
+    - name: Clone the repository
+      git:
+        repo: "{{project_repo}}"
+        dest: "~/{{name}}"
+        key_file: "~/.ssh/id_rsa"
+        accept_hostkey: yes
+        force: yes
+      with_items: "{{users}}"
+    - name: Save local_settings
+      template:
+        src: "templates/local_settings.py.template"
+        dest: "{{project_folder}}/{{name}}/local_settings.py"
+    - name: Install requirements
+      pip:
+        requirements: "{{project_folder}}/requirements.txt"
+        virtualenv: "{{project_folder}}/venv"
+        virtualenv_python: python3
