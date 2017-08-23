@@ -10,9 +10,9 @@
     raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
 - name: Create
   hosts: digitalocean_root
-  vars_files:
-    - .keys/vars.yml
   tasks:
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
     - name: Create users
       user:
         name: "{{item.name}}"
@@ -24,18 +24,30 @@
     - name: Add new users to the sudo group
       shell: "usermod -aG sudo {{ item.name }}"
       with_items: "{{ users }}"
+    - name: "Ensures {{PROJECT_PATH}}/.drim/<user>/ exists"
+      file:
+        path: "{{PROJECT_PATH}}/.drim/{{item.name}}"
+        state: directory
+      with_items: "{{users}}"
+    - name: Add id_rsa key to keys
+      shell: "eval \"$(ssh-agent)\";ssh-add -k ~{{item.name}}/.ssh/id_rsa"
+      with_items: "{{users}}"
+    - fetch:
+        src: "~{{item.name}}/.ssh/id_rsa.pub"
+        dest: "{{PROJECT_PATH}}/.drim/{{item.name}}/id_rsa.pub"
+      with_items: "{{users}}"
     - name: Set authorized keys for connecting to host with new users
       authorized_key:
         user: "{{item.name}}"
         state: present
-        key: "{{ lookup('file', '.keys/key.pub') }}"
+        key: "{{ lookup('file', '{{PROJECT_PATH}}/.drim/keys/key.pub') }}"
       become_user: "{{item.name}}"
       with_items: "{{users}}"
     - name: Add a host for each user to ansible hosts inventory file
       add_host:
-        name: "{{ host_info.ip }}"
+        name: "{{ hostvars[groups.digitalocean_root.0].name }}"
         groups: digitalocean
-        ansible_ssh_private_key_file: "{{host_info.ansible_ssh_private_key_file}}"
+        ansible_ssh_private_key_file: "{{hostvars[groups.digitalocean_root.0].ansible_ssh_private_key_file}}"
         ansible_ssh_user: "{{item.name}}"
         ansible_sudo_pass: "{{item.password}}"
       with_items: "{{users}}"
@@ -46,7 +58,7 @@
       lineinfile:
         dest: "{{inventory_file}}"
         regexp: '.*{{ item }}$'
-        line: "{{item}}
+        line: "{{item.name}}
         ansible_ssh_private_key_file={{hostvars[item].ansible_ssh_private_key_file}}
         ansible_sudo_pass={{hostvars[item].ansible_sudo_pass}}
         ansible_ssh_user={{hostvars[item].ansible_ssh_user}}"

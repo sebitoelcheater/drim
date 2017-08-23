@@ -3,14 +3,6 @@
   tasks:
     - name: Include vars files
       include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
-    - name: Add hosts to ansible hosts inventory
-      add_host:
-        name: "{{ item.ip }}"
-        groups: "{{ item.group }}"
-        ansible_ssh_private_key_file: "{{item.ansible_ssh_private_key_file}}"
-        ansible_ssh_user: "{{item.ansible_ssh_user}}"
-        ansible_sudo_pass: "{{item.ansible_sudo_pass}}"
-      with_items: "{{hosts}}"
     - name: Save groups
       django_manage:
         command: "dumpdata auth.group --output {{PROJECT_PATH}}/main/fixtures/groups.json"
@@ -30,6 +22,24 @@
       include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
     - set_fact:
         datetime: "{{ansible_date_time}}"
+    - name: Create backup folders if not exists
+      file:
+        path: "{{item}}"
+        state: directory
+        mode: 0755
+        group: root
+        owner: "{{users.0.name}}"
+      with_items:
+        - "~{{users.0.name}}/backups/database/{{name}}"
+        - "~{{users.0.name}}/backups/database/traccar_db"
+    - name: "Ensures that remote backup directory exists"
+      file:
+        path: "{{item}}"
+        state: directory
+      when: False
+      with_items:
+        - "~/backups/database/{{name}}"
+        - "~/backups/database/traccar_db"
     - name: Create dump of moviltravel database
       shell: pg_dump -U moviltravel_admin moviltravel > ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
     - name: Fetch dump of moviltravel just created to localhost
