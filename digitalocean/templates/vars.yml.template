@@ -1,0 +1,33 @@
+name:
+user:
+heroku_exists:
+host_info:
+  ip:
+  ansible_ssh_private_key_file:
+users:
+  - name:
+    comment:
+    group:
+    encrypted_password:
+    password:
+sysadmin:
+  name:
+  email:
+databases:
+  postgres:
+    - database:
+      user:
+      password:
+      host:
+      port:
+  mysql:
+project_folder:
+aws:
+  STORAGE_BUCKET_NAME:
+  ACCESS_KEY_ID:
+  SECRET_ACCESS_KEY:
+sendgrid:
+  username:
+  password:
+google_maps:
+  api_key:

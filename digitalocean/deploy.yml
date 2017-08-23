@@ -1,0 +1,79 @@
+- name: Save permissions and groups of localhost database to fixtures
+  hosts: localhost
+  tasks:
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
+    - name: Add hosts to ansible hosts inventory
+      add_host:
+        name: "{{ item.ip }}"
+        groups: "{{ item.group }}"
+        ansible_ssh_private_key_file: "{{item.ansible_ssh_private_key_file}}"
+        ansible_ssh_user: "{{item.ansible_ssh_user}}"
+        ansible_sudo_pass: "{{item.ansible_sudo_pass}}"
+      with_items: "{{hosts}}"
+    - name: Save groups
+      django_manage:
+        command: "dumpdata auth.group --output {{PROJECT_PATH}}/main/fixtures/groups.json"
+        app_path: "{{ localhost_project_folder }}"
+        pythonpath: "{{localhost_virtualenv}}/bin/python"
+        virtualenv: "{{localhost_virtualenv}}"
+    - name: Save permissions
+      django_manage:
+        command: "dumpdata auth.permission --output main/fixtures/permissions.json"
+        app_path: "{{ localhost_project_folder }}"
+        pythonpath: "{{localhost_virtualenv}}/bin/python"
+        virtualenv: "{{localhost_virtualenv}}"
+- name: Set Django project with heroku
+  hosts: digitalocean
+  tasks:
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
+    - set_fact:
+        datetime: "{{ansible_date_time}}"
+    - name: Create dump of moviltravel database
+      shell: pg_dump -U moviltravel_admin moviltravel > ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
+    - name: Fetch dump of moviltravel just created to localhost
+      fetch:
+        src: ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
+        dest: ../.backups/{{datetime.iso8601}}
+    - name: Create dump of traccar_db database
+      shell: pg_dump -U traccar_db_admin traccar_db > ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
+    - name: Fetch dump of traccar_db just created to localhost
+      fetch:
+        src: ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
+        dest: ../.backups/{{datetime.iso8601}}
+    - name: pull
+      shell: git pull origin master
+      args:
+        chdir: "{{project_folder}}"
+    - name: Install requirements
+      pip:
+        requirements: "{{project_folder}}/requirements.txt"
+        virtualenv: "{{project_folder}}/venv"
+    - name: collect static
+      django_manage:
+        command: collectstatic
+        app_path: "{{ project_folder }}"
+        pythonpath: "{{project_folder}}/venv/bin/python"
+        virtualenv: "{{project_folder}}/venv"
+    - name: migrate
+      django_manage:
+        command: migrate
+        app_path: "{{ project_folder }}"
+        pythonpath: "{{project_folder}}/venv/bin/python"
+        virtualenv: "{{project_folder}}/venv"
+    - name: initialize
+      django_manage:
+        command: initialize
+        app_path: "{{ project_folder }}"
+        pythonpath: "{{project_folder}}/venv/bin/python"
+        virtualenv: "{{project_folder}}/venv"
+- name: Reboot
+  become: true
+  hosts: digitalocean_root
+  tasks:
+    - name: Restart daemons, gunicorn and nginx
+      shell: systemctl daemon-reload;systemctl restart gunicorn;systemctl restart nginx;
+    - name: Reboot
+      shell: reboot
+      ignore_errors: True
