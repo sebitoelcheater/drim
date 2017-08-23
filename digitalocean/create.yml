@@ -40,7 +40,6 @@
     - name: Create database
       shell: "sudo -u postgres psql -c \"CREATE DATABASE {{item.database}};\""
       with_items: "{{databases.postgresql}}"
-      when: False
     - name: Create user and grant privileges on postgresql database
       command: "sudo -u postgres psql -c \"
         CREATE USER {{item.user}} WITH PASSWORD '{{item.password}}';
@@ -49,11 +48,9 @@
         ALTER ROLE {{item.user}} SET timezone TO 'UTC';
         GRANT ALL PRIVILEGES ON DATABASE {{item.database}} TO {{item.user}};\""
       with_items: "{{databases.postgresql}}"
-      when: False
     - name: install postgis extension
       command: "sudo -u postgres psql {{item.database}} -c \"CREATE EXTENSION postgis;\""
       with_items: "{{databases.postgresql}}"
-      when: False
     - name: update pip
       shell: sudo -H pip3 install --upgrade pip
     - name: install virtualenv
