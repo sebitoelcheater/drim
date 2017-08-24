@@ -90,8 +90,8 @@
       shell: ufw delete allow 8000
     - name: firewall
       shell: ufw allow 'Nginx Full'
-    - name: restart
-      shell: sudo systemctl daemon-reload;sudo systemctl restart gunicorn;sudo systemctl restart nginx
+    - name: Restart daemons, gunicorn and nginx
+      shell: systemctl daemon-reload;systemctl restart gunicorn;systemctl restart nginx;
 # Assuming this previous steps:
 # Run digitalocean/initialize.yml
 # Create ssh key and add to github
@@ -118,3 +118,10 @@
         requirements: "{{project_folder}}/requirements.txt"
         virtualenv: "{{project_folder}}/venv"
         virtualenv_python: python3
+- name: Reboot
+  hosts: digitalocean_root
+  become: true
+  tasks:
+    - name: Reboot
+      shell: reboot
+      ignore_errors: True
