@@ -26,17 +26,13 @@
       file:
         path: "{{item}}"
         state: directory
-        mode: 0755
-        group: root
-        owner: "{{users.0.name}}"
       with_items:
-        - "~{{users.0.name}}/backups/database/{{name}}"
-        - "~{{users.0.name}}/backups/database/traccar_db"
+        - "~/backups/database/{{name}}"
+        - "~/backups/database/traccar_db"
     - name: "Ensures that remote backup directory exists"
       file:
         path: "{{item}}"
         state: directory
-      when: False
       with_items:
         - "~/backups/database/{{name}}"
         - "~/backups/database/traccar_db"

@@ -48,6 +48,15 @@
         ALTER ROLE {{item.user}} SET timezone TO 'UTC';
         GRANT ALL PRIVILEGES ON DATABASE {{item.database}} TO {{item.user}};\""
       with_items: "{{databases.postgresql}}"
+    - name: Get postgresql pg_hba.conf path
+      shell: echo /etc/postgresql/$(ls /etc/postgresql)/main/pg_hba.conf
+      register: pg_hba_path
+    - name: Set trust if conection is in localhost pg_hba.conf
+      replace:
+        path: "{{pg_hba_path.stdout}}"
+        regexp: '^(local[^a]*all[^a]*all[^p]*)peer$'
+        replace: '\1trust'
+        backup: yes
     - name: install postgis extension
       command: "sudo -u postgres psql {{item.database}} -c \"CREATE EXTENSION postgis;\""
       with_items: "{{databases.postgresql}}"
