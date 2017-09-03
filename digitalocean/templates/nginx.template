@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name {{hostvars[groups.digitalocean_root.0].name}};
+    server_name {{groups.digitalocean_root.0}};
 
     location = /favicon.ico { access_log off; log_not_found off; }
     location /static/ {

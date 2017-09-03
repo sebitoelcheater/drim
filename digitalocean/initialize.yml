@@ -45,7 +45,7 @@
       with_items: "{{users}}"
     - name: Add a host for each user to ansible hosts inventory file
       add_host:
-        name: "{{ hostvars[groups.digitalocean_root.0].name }}"
+        name: "{{ groups.digitalocean_root.0 }}"
         groups: digitalocean
         ansible_ssh_private_key_file: "{{hostvars[groups.digitalocean_root.0].ansible_ssh_private_key_file}}"
         ansible_ssh_user: "{{item.name}}"
@@ -58,7 +58,7 @@
       lineinfile:
         dest: "{{inventory_file}}"
         regexp: '.*{{ item }}$'
-        line: "{{item.name}}
+        line: "{{item}}
         ansible_ssh_private_key_file={{hostvars[item].ansible_ssh_private_key_file}}
         ansible_sudo_pass={{hostvars[item].ansible_sudo_pass}}
         ansible_ssh_user={{hostvars[item].ansible_ssh_user}}"
