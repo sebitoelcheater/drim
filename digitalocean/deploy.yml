@@ -34,13 +34,13 @@
     - name: Fetch dump of moviltravel just created to localhost
       fetch:
         src: ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
-        dest: ../.backups/{{datetime.iso8601}}
+        dest: "{{PROJECT_PATH}}/.backups/{{datetime.iso8601}}"
     - name: Create dump of traccar_db database
       shell: pg_dump -U traccar_db_admin traccar_db > ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
     - name: Fetch dump of traccar_db just created to localhost
       fetch:
         src: ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
-        dest: ../.backups/{{datetime.iso8601}}
+        dest: "{{PROJECT_PATH}}/.backups/{{datetime.iso8601}}"
     - name: pull
       shell: git pull origin master
       args:

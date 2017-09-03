@@ -34,7 +34,7 @@
       with_items: "{{users}}"
     - fetch:
         src: "~{{item.name}}/.ssh/id_rsa.pub"
-        dest: "{{PROJECT_PATH}}/.drim/{{item.name}}/id_rsa.pub"
+        dest: "{{PROJECT_PATH}}/.drim/{{item.name}}"
       with_items: "{{users}}"
     - name: Set authorized keys for connecting to host with new users
       authorized_key:
