@@ -29,13 +29,6 @@
       with_items:
         - "~/backups/database/{{name}}"
         - "~/backups/database/traccar_db"
-    - name: "Ensures that remote backup directory exists"
-      file:
-        path: "{{item}}"
-        state: directory
-      with_items:
-        - "~/backups/database/{{name}}"
-        - "~/backups/database/traccar_db"
     - name: Create dump of moviltravel database
       shell: pg_dump -U moviltravel_admin moviltravel > ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
     - name: Fetch dump of moviltravel just created to localhost
