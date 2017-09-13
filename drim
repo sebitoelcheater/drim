@@ -13,6 +13,10 @@ if [ "$platform" == "digitalocean" ]; then
     ansible-playbook $drim_path/digitalocean/initialize.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
   elif [ "$action" == "create" ]; then
     ansible-playbook $drim_path/digitalocean/create.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  elif [ "$action" == "sandbox" ]; then
+    ansible-playbook $drim_path/digitalocean/sandbox.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  elif [ "$action" == "backup" ]; then
+    ansible-playbook $drim_path/digitalocean/backup.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
   fi
 elif [ "$platform" == "ionic" ]; then
   if [ "$action" == "deploy" ]; then

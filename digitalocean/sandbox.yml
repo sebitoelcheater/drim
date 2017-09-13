@@ -1,0 +1,9 @@
+# Add this snippet to the top of your playbook.
+# It will install python2 if missing (but checks first so no expensive repeated apt updates)
+# gwillem@gmail.com
+# This fixed the publickey error raised by digitalocean:
+# Maybe was because of defining a host with unexistant user
+- name: Sandbox
+  hosts: digitalocean_root
+  tasks:
+    - debug: var=hostvars[ansible_host]['ansible_ssh_private_key_file']

@@ -1,0 +1,26 @@
+- name: Set Django project with heroku
+  hosts: digitalocean
+  tasks:
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
+    - set_fact:
+        datetime: "{{ansible_date_time}}"
+    - name: Create backup folders if not exists
+      file:
+        path: "{{item}}"
+        state: directory
+      with_items:
+        - "~/backups/database/{{name}}"
+        - "~/backups/database/traccar_db"
+    - name: Create dump of moviltravel database
+      shell: pg_dump -U moviltravel_admin moviltravel > ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
+    - name: Fetch dump of moviltravel just created to localhost
+      fetch:
+        src: ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
+        dest: "{{PROJECT_PATH}}/.backups/{{datetime.iso8601}}"
+    - name: Create dump of traccar_db database
+      shell: pg_dump -U traccar_db_admin traccar_db > ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
+    - name: Fetch dump of traccar_db just created to localhost
+      fetch:
+        src: ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
+        dest: "{{PROJECT_PATH}}/.backups/{{datetime.iso8601}}"
