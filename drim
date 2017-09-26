@@ -26,4 +26,10 @@ elif [ "$platform" == "ionic" ]; then
   elif [ "$action" == "create" ]; then
     ansible-playbook $drim_path/ionic/create.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
   fi
+elif [ "$platform" == "init" ]; then
+  if [ "$action" == "digitalocean" ]; then
+    python3 $drim_path/digitalocean/init.py $drim_path $project_path;
+  elif [ "$action" == "ionic" ]; then
+    python3 $drim_path/ionic/init.py $drim_path $project_path;
+  fi
 fi
