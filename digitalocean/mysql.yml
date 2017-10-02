@@ -1,0 +1,67 @@
+#- name: set Debian like vars
+#  set_fact:
+#    mysql_pkgs:
+#      - python-selinux
+#      - mysql-server
+#      - python-mysqldb
+#    mysql_service: mysql
+#    mysql_conf_dir: "/etc/mysql/"
+#    mysql_port: 3306
+#    mysql_bind_address: "0.0.0.0"
+#    mysql_db_id: 7
+#- name: Copy the my.cnf file
+#  template: src=my.cnf.{{ ansible_os_family }}.j2 dest={{ mysql_conf_dir }}/my.cnf
+#  notify:
+#   - restart mysql
+# Assuming this previous steps:
+# Run digitalocean/initialize.yml
+# Create ssh key and add to github
+# Create and clone repository in github
+- name: Set Django project with heroku
+  vars_files:
+    - .keys/vars.yml
+  vars:
+    libs:
+      - mysql-server
+      - libmysqlclient-dev
+      - python-pip
+      - python-dev
+      - mysql-server
+      - libmysqlclient-dev
+      - python-mysqldb
+  hosts: digitalocean
+  become: true
+  tasks:
+    - name: Get postgresql pg_hba.conf path
+      shell: echo /etc/postgresql/$(ls /etc/postgresql)/main/pg_hba.conf
+      register: pg_hba_path
+    - name: Set trust if conection is in localhost pg_hba.conf
+      replace:
+        path: "{{pg_hba_path.stdout}}"
+        regexp: '^(local[^a]*all[^a]*all[^p]*)peer$'
+        replace: '\1trust'
+        backup: yes
+    - name: Update
+      shell: apt-get update
+    - name:
+      apt:
+        name: "{{item}}"
+        state: present
+        update_cache: yes
+      with_items: "{{libs}}"
+    - name: Install the MySQL-python through pip
+      become: yes
+      pip:
+        name: "{{ item }}"
+        state: forcereinstall
+      with_items:
+        - pip
+        - MySQL-python
+    - name: Create a new database with name 'bobdata'
+      mysql_db:
+        name: "{{item.database}}"
+        state: present
+        login_password: "{{item.password}}"
+        login_user: "{{item.user}}"
+        login_host: "{{item.host}}"
+      with_items: "{{databases.mysql}}"

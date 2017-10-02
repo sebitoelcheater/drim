@@ -48,12 +48,10 @@
         app_path: "{{ project_folder }}"
         pythonpath: "{{project_folder}}/venv/bin/python"
         virtualenv: "{{project_folder}}/venv"
+      ignore_errors: true
 - name: Reboot
   become: true
   hosts: digitalocean_root
   tasks:
     - name: Restart daemons, gunicorn and nginx
       shell: systemctl daemon-reload;systemctl restart gunicorn;systemctl restart nginx;
-    - name: Reboot
-      shell: reboot
-      ignore_errors: True
