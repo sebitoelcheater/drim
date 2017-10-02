@@ -3,18 +3,6 @@
   tasks:
     - name: Include vars files
       include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
-    - name: Save groups
-      django_manage:
-        command: "dumpdata auth.group --output {{PROJECT_PATH}}/main/fixtures/groups.json"
-        app_path: "{{ localhost_project_folder }}"
-        pythonpath: "{{localhost_virtualenv}}/bin/python"
-        virtualenv: "{{localhost_virtualenv}}"
-    - name: Save permissions
-      django_manage:
-        command: "dumpdata auth.permission --output main/fixtures/permissions.json"
-        app_path: "{{ localhost_project_folder }}"
-        pythonpath: "{{localhost_virtualenv}}/bin/python"
-        virtualenv: "{{localhost_virtualenv}}"
 - name: Set Django project with heroku
   hosts: digitalocean
   tasks:
@@ -24,15 +12,12 @@
         datetime: "{{ansible_date_time}}"
     - name: Create backup folders if not exists
       file:
-        path: "{{item}}"
+        path: "~/backups/database/{{item.database}}"
         state: directory
-      with_items:
-        - "~/backups/database/{{name}}"
-        - "~/backups/database/traccar_db"
+      with_items: "{{databases.postgresql}}"
     - name: Create dump of moviltravel database
-      shell: pg_dump -U moviltravel_admin moviltravel > ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
-    - name: Create dump of traccar_db database
-      shell: pg_dump -U traccar_db_admin traccar_db > ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
+      shell: "pg_dump -U {{item.database}}_admin {{item.database}} > ~/backups/database/{{item.database}}/{{datetime.iso8601}}.sql"
+      with_items: "{{databases.postgresql}}"
     - name: pull
       shell: git pull origin master
       args:
