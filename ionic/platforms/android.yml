@@ -24,7 +24,7 @@
   expect:
     command: "jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1
     -keystore {{platforms.android.keystore.path}}
-    {{PROJECT_PATH}}/platforms/android/build/outputs/apk/android-release-unsigned.apk
+    {{PROJECT_PATH}}/platforms/android/build/outputs/apk/release/android-release-unsigned.apk
     {{platforms.android.keystore.alias}}"
     responses:
       'Enter Passphrase for keystore: ': "{{platforms.android.keystore.password}}"
@@ -34,5 +34,5 @@
 - name: Optimize APK
   shell:
     cmd: "~/Library/Android/sdk/build-tools/26.0.1/zipalign -v 4
-    platforms/android/build/outputs/apk/android-release-unsigned.apk {{ app_name }}.apk"
+    platforms/android/build/outputs/apk/release/android-release-unsigned.apk {{ app_name }}.apk"
     chdir: "{{PROJECT_PATH}}"
