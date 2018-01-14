@@ -61,7 +61,7 @@ if input('Create bucket? (Y/n): ') in ["", "y", "Y"]:
     subprocess.check_output(["aws", "s3", "mb", "s3://{}".format(bucket_name)])
     with open("{}/digitalocean/templates/aws.s3.policy.json".format(DRIM_PATH), 'r') as myfile:
         template = Template(myfile.read().replace('\n', ''))
-        policy = template.render(name=app_name)
+        policy = template.render(name=bucket_name)
     new_policy = json.loads(subprocess.check_output(["aws", "iam", "create-policy", "--policy-name", "{}S3".format(app_name), "--policy-document", policy]))
     subprocess.check_output(["aws", "iam", "create-user", "--user-name", app_name])
     aws_keys = json.loads(subprocess.check_output(["aws", "iam", "create-access-key", "--user-name", app_name]))
