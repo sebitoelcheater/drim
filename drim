@@ -32,4 +32,8 @@ elif [ "$platform" == "init" ]; then
   elif [ "$action" == "ionic" ]; then
     python3 $drim_path/ionic/init.py $drim_path $project_path;
   fi
+elif [ "$platform" == "angular" ]; then
+  if [ "$action" == "deploy" ]; then
+    ansible-playbook $drim_path/angular/deploy.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+  fi
 fi

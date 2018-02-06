@@ -1,0 +1,13 @@
+- name: Deploy Angular project to AWS S3
+  hosts: localhost
+  vars:
+    backup: false
+  tasks:
+    - name: Build project for production
+      shell:
+        cmd: "ng build -prod"
+        chdir: "{{PROJECT_PATH}}"
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/credentials.yml"
+    - name: sync
+      shell: "aws s3 sync {{PROJECT_PATH}}/dist s3://{{BUCKET_NAME}} --delete --acl public-read"
