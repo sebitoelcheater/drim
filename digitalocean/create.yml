@@ -21,10 +21,11 @@
       # - mysql-server
       # - libmysqlclient-dev
       # - python-mysqldb
-    python_libs:
-      - django
-      - gunicorn
-      - psycopg2
+    python_libs: []
+      # moved to the digitalocean host playbook (last in this file)
+      # - django
+      # - gunicorn
+      # - psycopg2
   hosts: digitalocean
   become: true
   tasks:
@@ -66,10 +67,6 @@
       shell: sudo -H pip3 install virtualenv
     - name: Create an exception for port 8000
       shell: ufw allow 8000; ufw allow 8082;
-    - name: Install important python libs
-      pip:
-        name: "{{item}}"
-      with_items: "{{python_libs}}"
     - name: Create gunicorn template file
       template:
         src: "templates/gunicorn.service.template"
@@ -98,6 +95,11 @@
 # Create and clone repository in github
 - name: Clone repository
   hosts: digitalocean
+  vars:
+    python_libs:
+      - django
+      - gunicorn
+      - psycopg2
   tasks:
     - name: Include vars files
       include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
@@ -118,6 +120,12 @@
         requirements: "{{project_folder}}/requirements.txt"
         virtualenv: "{{project_folder}}/venv"
         virtualenv_python: python3
+    - name: Install important python libs
+      pip:
+        virtualenv: "{{project_folder}}/venv"
+        virtualenv_python: python3
+        name: "{{item}}"
+      with_items: "{{python_libs}}"
 - name: Reboot
   hosts: digitalocean_root
   become: true
