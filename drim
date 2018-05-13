@@ -28,9 +28,9 @@ elif [ "$platform" == "ionic" ]; then
   fi
 elif [ "$platform" == "init" ]; then
   if [ "$action" == "digitalocean" ]; then
-    python3 $drim_path/digitalocean/init.py $drim_path $project_path;
+    /Users/sebito/.virtualenvs/drim/bin/python3 $drim_path/digitalocean/init.py $drim_path $project_path;
   elif [ "$action" == "ionic" ]; then
-    python3 $drim_path/ionic/init.py $drim_path $project_path;
+    /Users/sebito/.virtualenvs/drim/bin/python3 $drim_path/ionic/init.py $drim_path $project_path;
   fi
 elif [ "$platform" == "angular" ]; then
   if [ "$action" == "deploy" ]; then
