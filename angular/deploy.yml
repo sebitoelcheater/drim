@@ -10,4 +10,4 @@
     - name: Include vars files
       include_vars: "{{PROJECT_PATH}}/.drim/credentials.yml"
     - name: sync
-      shell: "aws s3 sync {{PROJECT_PATH}}/dist s3://{{BUCKET_NAME}} --delete --acl public-read"
+      shell: "aws s3 sync {{PROJECT_PATH}}/dist s3://{{BUCKET_NAME}} --delete --acl public-read --profile {{PROFILE}}"
