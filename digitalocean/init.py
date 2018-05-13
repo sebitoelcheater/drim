@@ -73,7 +73,7 @@ if input('Create bucket? (Y/n): ') in ["", "y", "Y"]:
     }
 
 if input('Add sendgrid? (Y/n): ') in ["", "y", "Y"]:
-    heroku_name = "{}{}".format(app_name, "heroku")
+    heroku_name = app_name
     subprocess.check_output(["heroku", "apps:create", heroku_name])
     subprocess.check_output(["heroku", "addons:create", "sendgrid:starter", "--app", heroku_name])
     sendgrid_password = str(subprocess.check_output(["heroku", "config:get", "SENDGRID_PASSWORD", "--app", heroku_name])).replace("\\n'",'').replace("b'", "")
