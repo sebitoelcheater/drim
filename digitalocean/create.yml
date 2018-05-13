@@ -112,6 +112,7 @@
         force: yes
       with_items: "{{users}}"
     - name: Save local_settings
+      ignore_errors: True
       template:
         src: "templates/local_settings.py.template"
         dest: "{{project_folder}}/{{name}}/local_settings.py"

@@ -1,5 +1,7 @@
 - name: Save permissions and groups of localhost database to fixtures
   hosts: localhost
+  vars:
+    backup: false
   tasks:
     - name: Include vars files
       include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
@@ -10,14 +12,14 @@
       include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
     - set_fact:
         datetime: "{{ansible_date_time}}"
-    - name: Create backup folders if not exists
-      file:
-        path: "~/backups/database/{{item.database}}"
-        state: directory
-      with_items: "{{databases.postgresql}}"
-    - name: Create dump of moviltravel database
-      shell: "pg_dump -U {{item.database}}_admin {{item.database}} > ~/backups/database/{{item.database}}/{{datetime.iso8601}}.sql"
-      with_items: "{{databases.postgresql}}"
+#    - name: Create backup folders if not exists
+#      file:
+#        path: "~/backups/database/{{item.database}}"
+#        state: directory
+#      with_items: "{{databases.postgresql}}"
+#    - name: Create dump of {{item.database}} database
+#      shell: "pg_dump -U {{item.database}}_admin {{item.database}} > ~/backups/database/{{item.database}}/{{datetime.iso8601}}.sql"
+#      with_items: "{{databases.postgresql}}"
     - name: pull
       shell: git pull origin master
       args:
