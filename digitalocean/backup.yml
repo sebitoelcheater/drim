@@ -7,20 +7,14 @@
         datetime: "{{ansible_date_time}}"
     - name: Create backup folders if not exists
       file:
-        path: "{{item}}"
+        path: "~/backups/database/{{item.database}}"
         state: directory
-      with_items:
-        - "~/backups/database/{{name}}"
-        - "~/backups/database/traccar_db"
-    - name: Create dump of moviltravel database
-      shell: pg_dump -U moviltravel_admin moviltravel > ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
-    - name: Fetch dump of moviltravel just created to localhost
+      with_items: "{{databases.postgresql}}"
+    - name: Create dump of {{item.database}} database
+      shell: "pg_dump -U {{item.database}}_admin {{item.database}} > ~/backups/database/{{item.database}}/{{datetime.iso8601}}.sql"
+      with_items: "{{databases.postgresql}}"
+    - name: Fetch dump of {{item.database}} just created to localhost
       fetch:
-        src: ~/backups/database/moviltravel/{{datetime.iso8601}}.sql
-        dest: "{{PROJECT_PATH}}/.backups/{{datetime.iso8601}}"
-    - name: Create dump of traccar_db database
-      shell: pg_dump -U traccar_db_admin traccar_db > ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
-    - name: Fetch dump of traccar_db just created to localhost
-      fetch:
-        src: ~/backups/database/traccar_db/{{datetime.iso8601}}.sql
-        dest: "{{PROJECT_PATH}}/.backups/{{datetime.iso8601}}"
+        src: "~/backups/database/{{item.database}}/{{datetime.iso8601}}.sql"
+        dest: "{{PROJECT_PATH}}/.drim/backups/{{datetime.iso8601}}"
+      with_items: "{{databases.postgresql}}"
