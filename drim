@@ -8,23 +8,25 @@ action=$2
 
 if [ "$platform" == "digitalocean" ]; then
   if [ "$action" == "deploy" ]; then
-    ansible-playbook $drim_path/digitalocean/deploy.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/digitalocean/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "initialize" ]; then
-    ansible-playbook $drim_path/digitalocean/initialize.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/digitalocean/initialize.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "create" ]; then
-    ansible-playbook $drim_path/digitalocean/create.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/digitalocean/create.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
+  elif [ "$action" == "traccar" ]; then
+    ansible-playbook $drim_path/digitalocean/traccar.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "sandbox" ]; then
-    ansible-playbook $drim_path/digitalocean/sandbox.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/digitalocean/sandbox.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "backup" ]; then
-    ansible-playbook $drim_path/digitalocean/backup.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/digitalocean/backup.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   fi
 elif [ "$platform" == "ionic" ]; then
   if [ "$action" == "deploy" ]; then
-    ansible-playbook $drim_path/ionic/deploy.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/ionic/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "initialize" ]; then
-    ansible-playbook $drim_path/ionic/initialize.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/ionic/initialize.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "create" ]; then
-    ansible-playbook $drim_path/ionic/create.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/ionic/create.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   fi
 elif [ "$platform" == "init" ]; then
   if [ "$action" == "digitalocean" ]; then
@@ -34,6 +36,6 @@ elif [ "$platform" == "init" ]; then
   fi
 elif [ "$platform" == "angular" ]; then
   if [ "$action" == "deploy" ]; then
-    ansible-playbook $drim_path/angular/deploy.yml -i .drim/hosts.yml --extra-vars "DRIM_PATH=$drim_path PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/angular/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   fi
 fi

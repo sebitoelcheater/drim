@@ -1,0 +1,101 @@
+# Assuming this previous steps:
+# Run digitalocean/initialize.yml
+# Create ssh key and add to github
+# Create and clone repository in github
+- name: Install libs and create mysql database
+  vars:
+    libs:
+      - unzip
+      - default-jre
+      - mysql-server
+      - nginx
+      - python-certbot-nginx
+      - python-simplejson
+    python_libs: []
+  hosts: digitalocean
+  become: true
+  vars_files:
+    - "{{PROJECT_PATH}}/.drim/vars.yml"
+  tasks:
+    - name: Add certbot repository
+      command: add-apt-repository ppa:certbot/certbot
+      become: true
+    - name: Update
+      shell: apt-get update
+    - name:
+      apt:
+        name: "{{libs}}"
+        state: present
+  roles:
+    - role: geerlingguy.mysql
+- name: Install traccar
+  vars:
+    traccar:
+      url: https://github.com/traccar/traccar/releases/download/v4.2/traccar-linux-64-4.2.zip
+      zip_filename: traccar-linux-64-4.2.zip
+  hosts: digitalocean
+  vars_files:
+    - "{{PROJECT_PATH}}/.drim/vars.yml"
+  tasks:
+    - name: download sources
+      shell: "wget {{ traccar.url }}"
+    - name: unzip
+      shell: "unzip ~/{{traccar.zip_filename}}"
+    - name: Install traccar
+      command: ./traccar.run
+      become: true
+    - name: Create traccar.xml config file
+      become: true
+      template:
+        src: "templates/traccar/traccar.xml.template"
+        dest: "/opt/traccar/conf/traccar.xml"
+    - name: Creates directory
+      become: true
+      file: path=/etc/systemd/system/traccar.service.d state=directory
+    - name: Create run-as-user.conf
+      become: true
+      template:
+        src: "templates/traccar/run-as-user.conf.template"
+        dest: "/etc/systemd/system/traccar.service.d/run-as-user.conf"
+    - name: set traccar folder ownership to user
+      command: "chown -R {{users.0.name}} /opt/traccar"
+      become: true
+    - name: Create nginx traccar file
+      become: true
+      template:
+        src: "templates/traccar/nginx/traccar"
+        dest: "/etc/nginx/sites-available/{{server_url}}"
+    - name: Create nginx default file
+      become: true
+      template:
+        src: "templates/traccar/nginx/default"
+        dest: "/etc/nginx/sites-available/default"
+    - name: Symlink new nginx server block
+      command: "ln -s /etc/nginx/sites-available/{{server_url}} /etc/nginx/sites-enabled/"
+      become: true
+    - name: enable traccar service
+      systemd:
+        name: traccar
+        enabled: yes
+    - name: restart traccar service
+      become: true
+      systemd:
+        name: traccar
+        state: restarted
+    - name: restart nginx service
+      become: yes
+      systemd:
+        name: nginx
+        state: restarted
+    - name: Allow HTTPS Through the Firewall
+      command: ufw allow 'Nginx Full'
+      become: true
+    - name: Delete the redundant Nginx HTTP profile allowance
+      command: ufw delete allow 'Nginx HTTP'
+      become: true
+    - name: Obtain an SSL Certificate
+      command: certbot --nginx -d {{server_url}} -m {{certbot.email}} --agree-to --non-interactive --redirect
+      become: true
+    - name: Verify Certbot Auto-Renewal
+      command: certbot renew --dry-run
+      become: true
