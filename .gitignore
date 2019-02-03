@@ -7,3 +7,4 @@
 !digitalocean/.keys
 digitalocean/.keys/*
 !digitalocean/.keys/.keep
+.idea
