@@ -1,0 +1,178 @@
+- name: Create S3 buckets and point the domain to it. Add SSL certificate for https connection with CloudFront
+  hosts: localhost
+  vars:
+    cloudfront_hosted_zone_id: 'Z2FDTNDATAQYW2'
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks:
+    - command: "aws route53 list-hosted-zones --query 'HostedZones[?Name==`{{domain}}.`].Id'"
+      register: hosted_zones_result
+    - name: Create Route 53 Hosted Zone
+      command: aws route53 create-hosted-zone --name {{domain}} --caller-reference {{domain}}_reference
+      register: create_hosted_zone_result
+      when: hosted_zones_result.stdout | from_json | length
+    - set_fact:
+        hosted_zone: "{{ create_hosted_zone_result.stdout | from_json }}"
+    - debug: var=hosted_zone
+    - name: Create S3 bucket for website hosting
+      s3_bucket:
+        name: "{{item.resource}}"
+        policy: "{{ lookup('template', 's3_read_website_bucket.json.j2') }}"
+        state: present
+        region: "us-east-1"
+      with_items:
+        - resource: "www.{{domain}}"
+        - resource: "{{domain}}"
+    - name: Make main bucket static
+      s3_website:
+        name: "www.{{domain}}"
+        suffix: index.html
+        error_key: index.html
+        state: present
+    - name: Redirect from a domain to another domain
+      s3_website:
+        name: "{{domain}}"
+        redirect_all_requests: "www.{{domain}}"
+        state: present
+    - name: Upload home page
+      aws_s3:
+        bucket: "www.{{domain}}"
+        object: /index.html
+        src: templates/index.html
+        mode: put
+    - name: Request SSL certificate
+      command: aws acm request-certificate --domain-name {{domain}} --validation-method DNS --subject-alternative-names www.{{domain}}
+      register: request_certificate_result
+    - set_fact:
+        ssl_certificate: "{{ request_certificate_result.stdout | from_json }}"
+    - set_fact:
+        certificate_arn: "{{ssl_certificate.CertificateArn}}"
+    - debug: var=ssl_certificate
+    - name: Wait certificate request creation
+      pause:
+        seconds: 20
+    - name: obtain all facts for a single ACM certificate
+      aws_acm_facts:
+        domain_name: "{{domain}}"
+      register: ssl_certificates
+    - debug: var=ssl_certificates.certificates
+    - name: Add a CNAME record for certificates DNS validation and wait changes to replicate
+      route53:
+        state: present
+        zone: "{{domain}}"
+        record: "{{item.resource_record.name}}"
+        type: CNAME
+        ttl: 30
+        value: "{{item.resource_record.value}}"
+        wait: yes
+      with_items: "{{ssl_certificates.certificates[0].domain_validation_options}}"
+    - name: Wait until the certificate pass DNS validation
+      aws_acm_facts:
+        domain_name: "{{domain}}"
+      register: ssl_certificates
+      retries: 9000
+      delay: 30
+      until: ssl_certificates.certificates[0].domain_validation_options | json_query('[?validation_status!=`SUCCESS`]') | length == 0
+    - name: Wait a little more for certificate validation
+      pause:
+        minutes: 1
+    - debug: var=certificate_arn
+    - name: Create Cloud Front distribution with the created certificate
+      register: cloudfront_website_distribution
+      cloudfront_distribution:
+        state: present
+        caller_reference: "{{domain}}"
+        default_root_object: "index.html"
+        origins:
+          - id: "S3-www.{{domain}}"
+            domain_name: "www.{{domain}}.s3.amazonaws.com"
+            origin_path: ""
+            custom_headers: []
+            s3_origin_config:
+              origin_access_identity: ""
+        aliases:
+          - "{{ domain }}"
+          - "www.{{ domain }}"
+        default_cache_behavior:
+          target_origin_id: "S3-www.{{domain}}"
+          forwarded_values:
+            query_string: false
+            cookies:
+              forward: none
+            headers: []
+            query_string_cache_keys: []
+          trusted_signers:
+            enabled: false
+            quantity: 0
+          viewer_protocol_policy: redirect-to-https
+          smooth_streaming: false
+          compress: false
+          allowed_methods:
+            items:
+              - GET
+              - HEAD
+            cached_methods:
+              - GET
+              - HEAD
+        logging:
+          enabled: false
+          include_cookies: false
+          bucket: ""
+          prefix: ""
+        price_class: PriceClass_All
+        enabled: true
+        viewer_certificate:
+          acm_certificate_arn: "{{certificate_arn}}"
+          ssl_support_method: "sni-only"
+          minimum_protocol_version: "TLSv1.1_2016"
+          certificate: "{{certificate_arn}}"
+          certificate_source: acm
+        http_version: http2
+        ipv6_enabled: yes
+        comment: this is a cloudfront distribution with logging
+    - name: Output result diff
+      debug:
+        var: cloudfront_website_distribution.diff
+
+    - set_fact:
+        cloudfront_aliases_diff: []
+
+    - name: Look into diff to see if an alias was removed in the update
+      set_fact:
+        cloudfront_aliases_diff: "{{ cloudfront_website_distribution.diff.before.Aliases.Items | difference(cloudfront_website_distribution.diff.after.Aliases.Items) }}"
+      when:
+        - cloudfront_website_distribution.diff is defined
+        - cloudfront_website_distribution.diff.after is defined
+        - cloudfront_website_distribution.diff.after.Aliases is defined
+
+    - name: Output ALIASES diff after update
+      debug:
+        var: cloudfront_aliases_diff
+      when: (cloudfront_aliases_diff | length) > 0
+
+    - debug: var=cloudfront_website_distribution
+
+    - name: Save Cloudfront Domain and ID in variables
+      set_fact:
+        cloudfront_domain: "{{ cloudfront_website_distribution.domain_name }}"
+        cloudfront_id: "{{ cloudfront_website_distribution.id }}"
+    - name: Output Cloudfront domain
+      debug: var=cloudfront_domain
+
+    - name: Output Cloudfront ID
+      debug: var=cloudfront_id
+
+    - name: Add cloudfront aliases
+      route53:
+        zone: "{{domain}}"
+        record: "{{item}}"
+        type: A
+        value: "{{cloudfront_domain}}"
+        alias: true
+        overwrite: yes
+        alias_hosted_zone_id: "{{ cloudfront_hosted_zone_id }}"
+        state: present
+        wait: yes
+      with_items:
+        - "www.{{domain}}"
+        - "{{domain}}"
