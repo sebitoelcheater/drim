@@ -5,43 +5,47 @@
   vars_files:
     - "{{VARS_FILE}}"
   tasks:
-    - command: "aws route53 list-hosted-zones --query 'HostedZones[?Name==`{{domain}}.`].Id'"
+    - name: Check if hosted zone already exists for that domain
+      command: "aws route53 list-hosted-zones --query 'HostedZones[?Name==`{{domain}}.`].Id'"
       register: hosted_zones_result
+    - set_fact:
+        hosted_zone_already_exists: "{{hosted_zones_result.stdout | from_json | length != 0}}"
+    - debug: var=hosted_zone_already_exists
     - name: Create Route 53 Hosted Zone
       command: aws route53 create-hosted-zone --name {{domain}} --caller-reference {{domain}}_reference
       register: create_hosted_zone_result
-      when: hosted_zones_result.stdout | from_json | length
-    - set_fact:
-        hosted_zone: "{{ create_hosted_zone_result.stdout | from_json }}"
-    - debug: var=hosted_zone
+      when: not(hosted_zone_already_exists)
+    - debug: var="create_hosted_zone_result.stdout | from_json"
+      when: not(hosted_zone_already_exists)
+    - debug: var="hosted_zones_result.stdout | from_json"
+      when: hosted_zone_already_exists
     - name: Create S3 bucket for website hosting
       s3_bucket:
-        name: "{{item.resource}}"
+        name: "{{item}}"
         policy: "{{ lookup('template', 's3_read_website_bucket.json.j2') }}"
         state: present
         region: "us-east-1"
-      with_items:
-        - resource: "www.{{domain}}"
-        - resource: "{{domain}}"
+      with_items: "{{aliases}}"
     - name: Make main bucket static
       s3_website:
-        name: "www.{{domain}}"
+        name: "{{aliases[0]}}"
         suffix: index.html
         error_key: index.html
         state: present
     - name: Redirect from a domain to another domain
       s3_website:
-        name: "{{domain}}"
-        redirect_all_requests: "www.{{domain}}"
+        name: "{{item}}"
+        redirect_all_requests: "{{aliases[0]}}"
         state: present
+      with_items: "{{aliases[1:]}}"
     - name: Upload home page
       aws_s3:
-        bucket: "www.{{domain}}"
+        bucket: "{{aliases[0]}}"
         object: /index.html
         src: templates/index.html
         mode: put
     - name: Request SSL certificate
-      command: aws acm request-certificate --domain-name {{domain}} --validation-method DNS --subject-alternative-names www.{{domain}}
+      command: aws acm request-certificate --domain-name {{aliases[0]}} --validation-method DNS {{'--subject-alternative-names' if (aliases | length > 1) else ''}} {{aliases[1:]|join(' ')}}
       register: request_certificate_result
     - set_fact:
         ssl_certificate: "{{ request_certificate_result.stdout | from_json }}"
@@ -53,7 +57,7 @@
         seconds: 20
     - name: obtain all facts for a single ACM certificate
       aws_acm_facts:
-        domain_name: "{{domain}}"
+        domain_name: "{{aliases[0]}}"
       register: ssl_certificates
     - debug: var=ssl_certificates.certificates
     - name: Add a CNAME record for certificates DNS validation and wait changes to replicate
@@ -68,7 +72,7 @@
       with_items: "{{ssl_certificates.certificates[0].domain_validation_options}}"
     - name: Wait until the certificate pass DNS validation
       aws_acm_facts:
-        domain_name: "{{domain}}"
+        domain_name: "{{aliases[0]}}"
       register: ssl_certificates
       retries: 9000
       delay: 30
@@ -81,20 +85,18 @@
       register: cloudfront_website_distribution
       cloudfront_distribution:
         state: present
-        caller_reference: "{{domain}}"
+        caller_reference: "{{aliases[0]}}"
         default_root_object: "index.html"
         origins:
-          - id: "S3-www.{{domain}}"
-            domain_name: "www.{{domain}}.s3.amazonaws.com"
+          - id: "S3-{{aliases[0]}}"
+            domain_name: "{{aliases[0]}}.s3.amazonaws.com"
             origin_path: ""
             custom_headers: []
             s3_origin_config:
               origin_access_identity: ""
-        aliases:
-          - "{{ domain }}"
-          - "www.{{ domain }}"
+        aliases: "{{ aliases }}"
         default_cache_behavior:
-          target_origin_id: "S3-www.{{domain}}"
+          target_origin_id: "S3-{{aliases[0]}}"
           forwarded_values:
             query_string: false
             cookies:
@@ -173,6 +175,4 @@
         alias_hosted_zone_id: "{{ cloudfront_hosted_zone_id }}"
         state: present
         wait: yes
-      with_items:
-        - "www.{{domain}}"
-        - "{{domain}}"
+      with_items: "{{aliases}}"
