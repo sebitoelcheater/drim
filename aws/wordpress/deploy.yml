@@ -1,0 +1,34 @@
+- name: zip plugins
+  hosts: localhost
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks: 
+    - name: Create temporary build directory
+      tempfile:
+        state: directory
+        suffix: build
+      register: temp_folder
+    - debug: var=temp_folder
+    - name: Create a zip archive of multiple files
+      archive:
+        path: "{{wordpress.plugins}}"
+        dest: "{{temp_folder.path}}/plugins.zip"
+        format: zip
+- name: Upload plugins
+  hosts: "{{ENVIRONMENT}}"
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks:
+    - name: Ansible copy wordpress plugins to the remote server
+      copy:
+        src: "{{hostvars.localhost.temp_folder.path}}/plugins.zip"
+        dest: /home/bitnami/apps/wordpress/htdocs/wp-content/plugins
+    - name: Extract plugins compressed folder
+      unarchive:
+        remote_src: true
+        src: /home/bitnami/apps/wordpress/htdocs/wp-content/plugins/plugins.zip
+        dest: /home/bitnami/apps/wordpress/htdocs/wp-content/plugins
+    - name: Delete plugins.zip
+      file:
+        path: /home/bitnami/apps/wordpress/htdocs/wp-content/plugins/plugins.zip
+        state: absent

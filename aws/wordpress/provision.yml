@@ -1,0 +1,205 @@
+- name: Launch AWS EC2 instance with Wordpress by Bitnami
+  hosts: localhost
+  vars:
+    ami_id: ami-069a2160306ee1fd3
+    security_group_id: sg-088d8186158510c31
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks:
+    - name: Launch EC2 instance
+      when: true
+      command: "aws ec2 run-instances --image-id {{ami_id}} --count 1 --instance-type t2.micro --key-name MyKeyPair --security-group-ids {{security_group_id}}"
+      register: ec2_result
+    - name: set ec2 variable
+      when: true
+      set_fact:
+        ec2: "{{ ec2_result.stdout | from_json }}"
+    - name: wait until instance creates
+      when: true
+      command: "aws ec2 wait instance-status-ok --instance-ids {{item.InstanceId}}"
+      with_items: "{{ec2.Instances}}"
+    - name: fetch instances details
+      when: true
+      command: "aws ec2 describe-instances --instance-ids {{ec2.Instances.0.InstanceId}}"
+      register: instance_descriptions
+    - name: set Reservations variable
+      when: true
+      set_fact:
+        Reservations: "{{ instance_descriptions.stdout | from_json }}"
+    - name: ensure file exists
+      copy:
+        dest: "{{inventory_file}}"
+        content: ""
+        force: no
+    - name: Create group instances in hostsfile
+      when: true
+      lineinfile:
+        dest: "{{inventory_file}}"
+        line: "[{{ENVIRONMENT}}]"
+        state: present
+    - name: "Build hosts file"
+      when: true
+      lineinfile:
+        dest: "{{inventory_file}}"
+        regexp: '.*{{ item.PublicIpAddress }}$'
+        line: "{{item.PublicIpAddress}}
+        ansible_ssh_private_key_file={{PROJECT_PATH}}/{{private_key_file}}
+        ansible_ssh_user=ubuntu"
+        state: present
+      with_items: "{{Reservations.Reservations.0.Instances}}"
+    - meta: refresh_inventory
+- name: install python to use more advanced ansible functionalities
+  hosts: "{{ENVIRONMENT}}"
+  gather_facts: False
+  become: true
+  tasks:
+    - name: reboot
+      when: true
+      become: yes
+      reboot:
+    - name: install python 2
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+- name: Final steps
+  hosts: "{{ENVIRONMENT}}"
+  tasks:
+    - name: Get credentials from file
+      when: true
+      shell: cat bitnami_credentials | grep -oP "[A-Z\w]*(?=\')"
+      register: credentials
+    - name: Set credentials in variable
+      when: true
+      set_fact:
+        credentials:
+          user: "{{credentials.stdout_lines.0}}"
+          password: "{{credentials.stdout_lines.1}}"
+    - debug: var=credentials
+    - name: Save credentials to localhost vars file
+      local_action:
+        module: lineinfile
+        dest: "{{VARS_FILE}}"
+        regexp: '.*credentials:.*$'
+        line: "credentials: {{credentials | to_nice_json}}"
+        state: present
+    - name: HTTP Authorization Header support
+      when: true
+      blockinfile:
+        dest: /home/bitnami/apps/wordpress/conf/htaccess.conf
+        content: |
+          <IfModule mod_rewrite.c>
+          RewriteEngine on
+          RewriteCond %{HTTP:Authorization} ^(.*)
+          RewriteRule ^(.*) - [E=HTTP_AUTHORIZATION:%1]
+          </IfModule>
+          SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+    - name: reboot
+      when: true
+      become: yes
+      reboot:
+- name: write in local
+  hosts: localhost
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks:
+    - name: save instances
+      when: true
+      lineinfile:
+        dest: "{{VARS_FILE}}"
+        regexp: '.*ip:.*$'
+        line: "ip: {{item.PublicIpAddress}}"
+        state: present
+      with_items: "{{Reservations.Reservations.0.Instances}}"
+    - name: Add an A record with IP and wait until the changes have been replicated
+      route53:
+        state: present
+        zone: "{{domain}}"
+        record: "{{server_url}}"
+        type: A
+        ttl: 600
+        value: "{{ip}}"
+        wait: yes
+- name: Generate SSL certificate
+  hosts: "{{ENVIRONMENT}}"
+  vars_files:
+    - "{{VARS_FILE}}"
+  vars:
+    certbot_repo: https://github.com/certbot/certbot
+    libs:
+      - git
+  tasks:
+    - name: install libs
+      when: true
+      become: true
+      apt:
+        name: "{{libs}}"
+        state: present
+    - name: Clone the certbot repository
+      when: true
+      git:
+        repo: "{{certbot_repo}}"
+        dest: "/tmp/certbot"
+        accept_hostkey: yes
+        force: yes
+    - name: Generate SSL certificate using Certbot client for the domain
+      when: true
+      command: "./certbot-auto certonly --webroot -w /opt/bitnami/apps/wordpress/htdocs/ -d {{server_url}} -m {{certbot.email}} --agree-to --non-interactive --redirect"
+      args:
+        chdir: /tmp/certbot
+    - name: Backup old certificates
+      when: true
+      become: true
+      command: "mv {{item}} {{item}}.backup"
+      args:
+        chdir: /opt/bitnami/apache2/conf/
+      with_items:
+        - server.crt
+        - server.key
+    - name: Link certificates
+      when: true
+      command: "ln -s {{item.src}} {{item.dest}}"
+      become: true
+      with_items:
+        - src: "/etc/letsencrypt/live/{{server_url}}/fullchain.pem"
+          dest: /opt/bitnami/apache2/conf/server.crt
+        - src: "/etc/letsencrypt/live/{{server_url}}/privkey.pem"
+          dest: /opt/bitnami/apache2/conf/server.key
+    - name: make server certificate files readable by the root user only
+      when: true
+      become: true
+      command: "chown root:root {{item}}"
+      with_items:
+        - /opt/bitnami/apache2/conf/server.crt
+        - /opt/bitnami/apache2/conf/server.key
+    - name: make server certificate files readable by the root user only
+      when: true
+      become: true
+      command: "chmod 600 {{item}}"
+      with_items:
+        - /opt/bitnami/apache2/conf/server.crt
+        - /opt/bitnami/apache2/conf/server.key
+    - name: Allow HTTPS Through the Firewall
+      command: ufw allow 443/tcp
+      become: true
+    - name: HTTP Authorization Header support
+      blockinfile:
+        dest: /opt/bitnami/apps/wordpress/conf/httpd-prefix.conf
+        content: |
+          # forcing https redirection
+          RewriteEngine On
+          RewriteCond %{HTTPS} !=on
+          RewriteRule ^/(.*) https://%{SERVER_NAME}/$1 [R,L]
+    - name: Restart the Apache server
+      when: true
+      command: /opt/bitnami/ctlscript.sh restart apache
+      become: true
+    - name: Test the renewal process
+      when: true
+      command: /tmp/certbot/certbot-auto renew --dry-run
+    - name: Creates auto-renewal SSL certificates cronjob
+      when: true
+      cron:
+        name: Auto-renew SSL certificates
+        minute: 12
+        hour: 3
+        job: /tmp/certbot/certbot-auto renew --post-hook "sudo /opt/bitnami/ctlscript.sh restart apache" >> /var/log/letsencrypt/renew.log
+    - reboot:
+      become: true

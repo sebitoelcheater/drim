@@ -1,0 +1,60 @@
+.banner_row {
+	margin: 15px;
+	padding: 15px;
+	border-collapse:separate; 
+	border-spacing:2em;
+}
+
+.banner_row tbody tr{
+	margin: 20px 0;
+}
+
+.me_banner_container {
+	padding: 15px;
+}
+
+.me-header {
+	background: #00b7ff;
+    display: inline-block;
+    margin-bottom: 20px;
+    vertical-align: top;
+    width: 100%;
+}
+
+.me-logo-main {
+	float: left;
+    width: auto;
+    display: inline-block;
+    padding: 20px;
+}
+
+.me-logo-main img{
+	width: 64px;
+}
+
+.me-header-right {
+	display: inline-block;
+    padding: 24px 0;
+    margin-top: 10px;
+    width: 90%;
+}
+
+.me-header-right .logo-detail {
+	display: inline-block;
+    padding-left: 20px;
+    box-sizing: border-box;
+    vertical-align: middle;
+    margin: 0;
+}
+
+.me-header-right .logo-detail strong{
+	display: block;
+    font-size: 23px;
+    margin-bottom: 10px;
+    color: #fff;
+    line-height: 32px;
+}
+
+p.label.error {
+    color: red;
+}
