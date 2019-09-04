@@ -1,0 +1,21 @@
+[Unit]
+Description=Shippter Meteor
+After=network-online.target
+ 
+[Service]
+WorkingDirectory=/home/{{users.0.name}}/shippter
+ExecStart=/usr/local/bin/meteor
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=Shippter
+User={{users.0.name}}
+Group={{users.0.group}}
+Environment=NODE_ENV=demo
+Environment=PWD=/home/{{users.0.name}}/shippter
+Environment=PORT=3000
+Environment=HTTP_FORWARDED_COUNT=1
+Environment=ROOT_URL=https://{{server_url}}
+ 
+[Install]
+WantedBy=multi-user.target

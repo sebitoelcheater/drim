@@ -1,0 +1,147 @@
+# Assuming this previous steps:
+# Run digitalocean/initialize.yml
+# Create ssh key and add to github
+# Create and clone repository in github
+- name: Install libs, meteor included
+  vars:
+    meteor_version: "1.1.0.2"
+    libs:
+      - build-essential
+      - nginx
+      - npm
+      - python-certbot-nginx
+      - g++
+      - make
+      - upstart
+  hosts: digitalocean
+  vars_files:
+    - "{{PROJECT_PATH}}/.drim/vars.yml"
+  tasks:
+    - apt_repository:
+        repo: ppa:certbot/certbot
+        state: present
+      become: true
+    - name: Update
+      shell: apt-get update
+      become: true
+    - name:
+      apt:
+        name: "{{libs}}"
+        state: present
+      become: true
+    - name: meteor | verify if meteor is already installed
+      command: meteor --version
+      ignore_errors: yes
+      register: mtr_version
+      changed_when: mtr_version.rc != 0 or mtr_version.stdout != "Meteor {{ meteor_version }}"
+      check_mode: no
+    - name: get meteor installer
+      get_url:
+        url=https://install.meteor.com/
+        dest=/tmp/meteor.sh
+        mode=0440
+      when: mtr_version.changed and mtr_version.rc != 0
+    - name: Install meteor
+      command: /bin/sh /tmp/meteor.sh
+      when: mtr_version.changed and mtr_version.rc != 0
+
+#  roles:
+#    - role: carlos.acp.meteor
+#      when: true
+- name: Clone repository
+  hosts: digitalocean
+  vars:
+    python_libs: []
+  vars_files:
+    - "{{PROJECT_PATH}}/.drim/vars.yml"
+  tasks:
+    - name: Install mup
+      when: true
+      command: npm install -g mup
+      become: true
+    - name: link nodejs to node
+      when: true
+      command: ln -sf /usr/bin/nodejs /usr/bin/node
+      become: true
+    - name: update node
+      when: true
+      become: true
+      command: npm cache clean -f
+    - name: update node
+      when: true
+      become: true
+      command: npm install -g n
+    - name: update node
+      when: true
+      become: true
+      command: n stable
+    - name: Clone the repository
+      when: true
+      git:
+        repo: "{{project_repo}}"
+        dest: "{{project_folder}}"
+        key_file: "~/.ssh/id_rsa"
+        accept_hostkey: yes
+        force: yes
+      with_items: "{{users}}"
+    - name: checkout to branch
+      command: "git checkout {{git_branch}}"
+      args:
+        chdir: "{{project_folder}}"
+    - name: Install meteor project dependencies
+      when: true
+      shell: meteor npm install
+      args:
+        chdir: "{{project_folder}}"
+    - name: Create nginx meteor file
+      when: true
+      become: true
+      template:
+        src: "templates/nginx.j2"
+        dest: "/etc/nginx/sites-available/{{server_url}}"
+    - name: Create shippter systemd service
+      when: true
+      become: true
+      template:
+        src: "templates/systemd.j2"
+        dest: "/etc/systemd/system/{{name}}.service"
+    - name: Ensure that application daemon restarts automatically at boot
+      become: true
+      systemd:
+        name: "{{name}}"
+        enabled: yes
+    - name: Remove default nginx server block
+      when: true
+      become: true
+      file:
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+    - name: Symlink new nginx server block
+      when: true
+      command: "ln -sf /etc/nginx/sites-available/{{server_url}} /etc/nginx/sites-enabled/"
+      become: true
+    - name: restart nginx service
+      when: true
+      become: yes
+      systemd:
+        name: nginx
+        state: restarted
+    - name: Allow HTTPS Through the Firewall
+      when: true
+      command: ufw allow 'Nginx Full'
+      become: true
+    - name: Delete the redundant Nginx HTTP profile allowance
+      when: true
+      command: ufw delete allow 'Nginx HTTP'
+      become: true
+    - name: Obtain an SSL Certificate
+      when: true
+      command: certbot --nginx -d {{server_url}} -m {{certbot.email}} --agree-to --non-interactive --redirect
+      become: true
+    - name: Verify Certbot Auto-Renewal
+      when: true
+      command: certbot renew --dry-run
+      become: true
+    - name: reboot
+      reboot:
+      become: true

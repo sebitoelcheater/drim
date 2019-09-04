@@ -1,0 +1,31 @@
+- name: Clone repository
+  hosts: digitalocean
+  vars:
+    python_libs: []
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks:
+    - name: stop application service
+      become: yes
+      systemd:
+        name: "{{name}}"
+        state: stopped
+    - name: pull
+      command: "git pull origin {{git_branch}}"
+      args:
+        chdir: "{{project_folder}}"
+    - name: install dependencies
+      command: meteor npm install
+      become: true
+      args:
+        chdir: "{{project_folder}}"
+    - name: restart nginx service
+      become: yes
+      systemd:
+        name: nginx
+        state: restarted
+    - name: start application service
+      become: yes
+      systemd:
+        name: "{{name}}"
+        state: started
