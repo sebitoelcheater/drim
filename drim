@@ -2,40 +2,88 @@
 # My first script
 
 drim_path=$HOME/Developer/Proyectos/drim
+#drim_path=/media/psf/Home/Developer/Proyectos/drim
 project_path=${PWD}
-platform=$1
-action=$2
+export ANSIBLE_HOST_KEY_CHECKING=False
 
-if [ "$platform" == "digitalocean" ]; then
-  if [ "$action" == "deploy" ]; then
-    ansible-playbook $drim_path/digitalocean/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
+while [[ $# -gt 0 ]]
+do
+    key="${1}"
+    case ${key} in
+    -c|--cloud)
+        cloud="${2}"
+        shift # past argument
+        ;;
+    -a|--action)
+        action="${2}"
+        shift # past argument
+        ;;
+    -s|--subaction)
+        subaction="${2}"
+        shift # past argument
+        ;;
+    -e|--environment)
+        environment="${2}"
+        shift # past argument
+        ;;
+    -f|--framework)
+        framework="${2}"
+        shift # past argument
+        ;;
+    -h|--help)
+        echo "Show help"
+        ;;
+    *)    # unknown option
+        shift # past argument
+        ;;
+    esac
+    shift
+done
+
+if [ "$action" == "init" ]; then
+  if [ "$cloud" == "digitalocean" ]; then
+    /Users/sebito/.virtualenvs/drim/bin/python3 $drim_path/digitalocean/init.py $drim_path $project_path;
+  elif [ "$framework" == "ionic" ]; then
+    /Users/sebito/.virtualenvs/drim/bin/python3 $drim_path/ionic/init.py $drim_path $project_path;
+  fi
+elif [ "$cloud" == "digitalocean" ]; then
+  if [ "$framework" == "meteor" ]; then
+    ansible-playbook $drim_path/digitalocean/meteor/$action.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/$environment.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml" --verbose;
   elif [ "$action" == "initialize" ]; then
     ansible-playbook $drim_path/digitalocean/initialize.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "create" ]; then
     ansible-playbook $drim_path/digitalocean/create.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "traccar" ]; then
     ansible-playbook $drim_path/digitalocean/traccar.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
+  elif [ "$action" == "deploy" ]; then
+    ansible-playbook $drim_path/digitalocean/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "sandbox" ]; then
     ansible-playbook $drim_path/digitalocean/sandbox.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "backup" ]; then
     ansible-playbook $drim_path/digitalocean/backup.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   fi
-elif [ "$platform" == "ionic" ]; then
+elif [ "$framework" == "ionic" ]; then
   if [ "$action" == "deploy" ]; then
-    ansible-playbook $drim_path/ionic/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/ionic/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml";
   elif [ "$action" == "initialize" ]; then
     ansible-playbook $drim_path/ionic/initialize.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "create" ]; then
     ansible-playbook $drim_path/ionic/create.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   fi
-elif [ "$platform" == "init" ]; then
-  if [ "$action" == "digitalocean" ]; then
-    /Users/sebito/.virtualenvs/drim/bin/python3 $drim_path/digitalocean/init.py $drim_path $project_path;
-  elif [ "$action" == "ionic" ]; then
-    /Users/sebito/.virtualenvs/drim/bin/python3 $drim_path/ionic/init.py $drim_path $project_path;
+elif [ "$cloud" == "aws" ]; then
+  if [ "$framework" == "wordpress" ]; then
+    ansible-playbook $drim_path/aws/wordpress/$action.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/$environment.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml";
+  else
+    ansible-playbook $drim_path/aws/$action.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/$environment.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml";
   fi
-elif [ "$platform" == "angular" ]; then
+elif [ "$framework" == "angular" ]; then
   if [ "$action" == "deploy" ]; then
-    ansible-playbook $drim_path/angular/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
+    ansible-playbook $drim_path/angular/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml" --verbose;
   fi
+elif [ "$framework" == "react" ]; then
+  if [ "$action" == "deploy" ]; then
+    ansible-playbook $drim_path/react/deploy.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml" --verbose;
+  fi
+else
+  ansible-playbook $drim_path/$framework/$action.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml" --verbose;
 fi
