@@ -1,0 +1,12 @@
+- name: Deploy Angular project to AWS S3
+  hosts: localhost
+  vars:
+    backup: false
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks:
+    - name: Start npm
+      environment: "{{environment_vars}}"
+      shell:
+        cmd: "npm start --configuration={{ENVIRONMENT}}"
+        chdir: "{{PROJECT_PATH}}"
