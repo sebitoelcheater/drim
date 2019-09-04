@@ -2,12 +2,30 @@
   hosts: localhost
   vars:
     backup: false
+  vars_files:
+    - "{{VARS_FILE}}"
   tasks:
     - name: Build project for production
       shell:
-        cmd: "ng build -prod"
+        cmd: "ng build --prod --configuration={{ENVIRONMENT}}"
         chdir: "{{PROJECT_PATH}}"
+    - name: Compress .js files
+      shell:
+        cmd: gzip -9 *.js
+        chdir: "{{PROJECT_PATH}}/dist"
+    - name: Find compressed js files (ending with .js.gz)
+      register: gzipped
+      find:
+        paths: "{{PROJECT_PATH}}/dist"
+        patterns: '*.js.gz'
+    - name: Remove .gz extension from .js.gz files.
+      command: "mv {{item.path}} {{item.path | regex_replace('.gz$', '')}}"
+      with_items: "{{gzipped.files}}"
     - name: Include vars files
       include_vars: "{{PROJECT_PATH}}/.drim/credentials.yml"
-    - name: sync
-      shell: "aws s3 sync {{PROJECT_PATH}}/dist s3://{{BUCKET_NAME}} --delete --acl public-read --profile {{PROFILE}}"
+    - name: Sync compressed .js files
+      shell: "aws s3 sync {{PROJECT_PATH}}/dist s3://{{bucket_name}} --delete --acl public-read --profile {{PROFILE}} --exclude \"*\" --include \"*.js\" --content-encoding 'gzip'"
+    - name: Sync not compressed files
+      shell: "aws s3 sync {{PROJECT_PATH}}/dist s3://{{bucket_name}} --acl public-read --profile {{PROFILE}} --include \"*\" --exclude \"*.js\""
+    - name: invalidate caché
+      shell: "aws cloudfront create-invalidation --distribution-id {{cloudfront_distribution_id}} --paths \"/*\""
