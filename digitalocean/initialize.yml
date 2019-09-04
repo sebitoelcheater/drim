@@ -51,6 +51,18 @@
         ansible_ssh_user: "{{item.name}}"
         ansible_sudo_pass: "{{item.password}}"
       with_items: "{{users}}"
+    - name: list firewall rules
+      command: ufw app list
+      become: true
+    - name: Make sure that the firewall allows SSH connections so that we can log back in next time
+      ufw:
+        rule: allow
+        name: OpenSSH
+      become: true
+    - name: enable the firewall
+      ufw:
+        state: enabled
+      become: true
 - name: Save new users in inventory "hosts.yml" file
   hosts: localhost
   tasks:

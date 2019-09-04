@@ -6,7 +6,7 @@ After=network.target
 User={{user}}
 Group=www-data
 WorkingDirectory=/home/{{user}}/{{name}}
-ExecStart=/home/{{user}}/{{name}}/venv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/home/{{user}}/{{name}}/{{name}}.sock {{name}}.wsgi:application
+ExecStart=/home/{{user}}/{{name}}/venv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/home/{{user}}/{{name}}/{{name}}.sock {{name}}.wsgi:application -e DATABASE_URL=postgres://{{databases.postgresql.0.user}}:{{databases.postgresql.0.password}}@{{databases.postgresql.0.host}}:{{databases.postgresql.0.port}}/{{databases.postgresql.0.database}}
 
 [Install]
 WantedBy=multi-user.target

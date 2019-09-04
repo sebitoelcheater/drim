@@ -8,11 +8,28 @@ import string
 import random
 from jinja2 import Template
 import json
+import socket
+from os.path import expanduser
 
 HOME = str(Path.home())
 args = sys.argv[1:]
 DRIM_PATH = args[0]
 PROJECT_PATH = args[1]
+DIGITALOCEAN_SIZES = 'Class\tSlug\tvCPUs\tRAM\tDisk\tTransfer\tMonthly Price\n' \
+                     'Standard\ts-1vcpu-1gb\t1\t1 GB\t25 GB\t1 TB\t$5\n' \
+                     'Standard\ts-1vcpu-2gb\t1\t2 GB\t50 GB\t2 TB\t$10\n' \
+                     'Standard\ts-1vcpu-3gb\t1\t3 GB\t60 GB\t3 TB\t$15\n' \
+                     'Standard\ts-2vcpu-2gb\t2\t2 GB\t60 GB\t3 TB\t$15\n' \
+                     'Standard\ts-3vcpu-1gb\t3\t1 GB\t60 GB\t3 TB\t$15\n' \
+                     'Standard\ts-2vcpu-4gb\t2\t4 GB\t80 GB\t4 TB\t$20\n' \
+                     'Standard\ts-4vcpu-8gb\t4\t8 GB\t160 GB\t5 TB\t$40\n' \
+                     'Standard\ts-6vcpu-16gb\t6\t16 GB\t320 GB\t6 TB\t$80\n' \
+                     'Standard\ts-8vcpu-32gb\t8\t32 GB\t640 GB\t7 TB\t$160\n' \
+                     'Standard\ts-12vcpu-48gb\t12\t48 GB\t960 GB\t8 TB\t$240\n' \
+                     'Standard\ts-16vcpu-64gb\t16\t64 GB\t1,280 GB\t9 TB\t$320\n' \
+                     'Standard\ts-20vcpu-96gb\t20\t96 GB\t1,920 GB\t10 TB\t$480\n' \
+                     'Standard\ts-24vcpu-128gb\t24\t128 GB\t2,560 GB\t11 TB\t$640\n' \
+                     'Standard\ts-32vcpu-192gb\t32\t192 GB\t3,840 GB\t12 TB\t$960\n'
 
 project_drim_path = "{}/{}".format(PROJECT_PATH, ".drim")
 project_keys_path = "{}/{}/{}".format(PROJECT_PATH, ".drim", "keys")
@@ -28,6 +45,7 @@ app_name = input('Application name: ')
 json_vars["name"] = app_name
 json_vars["user"] = "{{name}}_user"
 json_vars["project_folder"] = "/home/{{user}}/{{name}}"
+json_vars["project_root"] = "/home/{{user}}/{{name}}/{{name}}"
 json_vars["localhost_project_folder"] = PROJECT_PATH
 json_vars["localhost_virtualenv"] = "~/.virtualenvs/{{name}}"
 json_vars["project_repo"] = "git@github.com:sebitoelcheater/{{name}}.git"
@@ -54,7 +72,7 @@ for i in range(int(input('Number of PostgreSQL databases: '))):
         "user": "{}_admin".format(db_names[i]),
         "password": "{}_12345678".format(db_names[i]),
         "host": "localhost",
-        "port": '',
+        "port": '5432',
         "postgis": True,
     })
 
@@ -115,15 +133,23 @@ if input('Add Google Maps? (Y/n): ') in ["", "y", "Y"]:
 
 if input('Create DigitalOcean Droplet? (Y/n): ') in ["", "y", "Y"]:
     import digitalocean
+    from digitalocean import SSHKey
     do_token = input('DigitalOcean token: ')
     manager = digitalocean.Manager(token=do_token)
     keys = manager.get_all_sshkeys()
+    if len(keys) == 0:
+        print('uploading your private key to digitalocean...')
+        user_ssh_key = open(f'{expanduser("~")}/.ssh/id_rsa.pub').read()
+        key = SSHKey(token=do_token, name=socket.gethostname(), public_key=user_ssh_key)
+        key.create()
+        keys = manager.get_all_sshkeys()
+    print('creating droplet...')
     droplet = digitalocean.Droplet(
         token=do_token,
         name=input('Droplet name: '),
         region='sfo2',  # Amsterdam
         image='ubuntu-16-04-x64',  # Ubuntu 16.04 x64
-        size_slug=input('Droplet size (ej: s-1vcpu-2gb): '),  # 512MB
+        size_slug=input(f'{DIGITALOCEAN_SIZES}\nDroplet size: '),  # 512MB
         ssh_keys=keys,  # Automatic conversion
         backups=False)
     droplet.create()

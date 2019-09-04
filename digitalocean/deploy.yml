@@ -21,7 +21,7 @@
 #      shell: "pg_dump -U {{item.database}}_admin {{item.database}} > ~/backups/database/{{item.database}}/{{datetime.iso8601}}.sql"
 #      with_items: "{{databases.postgresql}}"
     - name: pull
-      shell: git pull origin master
+      command: "git pull origin {{develop}}"
       args:
         chdir: "{{project_folder}}"
     - name: Install requirements
@@ -31,7 +31,7 @@
     - name: Save local_settings
       template:
         src: "{{PROJECT_PATH}}/.drim/local_settings.py"
-        dest: "{{project_folder}}/{{name}}/local_settings.py"
+        dest: "{{project_root}}/local_settings.py"
     - name: collect static
       django_manage:
         command: collectstatic
