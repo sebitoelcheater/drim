@@ -8,12 +8,15 @@
         #- include: deploy/prepare.yml
         - name: Include credentials
           include_vars: "{{PROJECT_PATH}}/.drim/credentials.yml"
-        - shell: source ~/.zshrc
+        #- shell: source ~/.zshrc
         - debug: var=python_version
         - include: platforms/android.yml
           when: platforms.android.present is defined and platforms.android.present
         - include: platforms/browser.yml
           when: platforms.browser.present is defined and platforms.browser.present
+        - include: platforms/ios.yml
+          when: platforms.ios.present is defined and platforms.ios.present
+
       always:
         - name: Save created stuff info
           command: echo "ok"

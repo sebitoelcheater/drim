@@ -5,7 +5,7 @@
   ignore_errors: yes
 - name: Build APK
   shell:
-    cmd: ionic cordova build --release android
+    cmd: "ENVIRONMENT={{ENVIRONMENT}} ionic cordova build --release --prod android"
     chdir: "{{PROJECT_PATH}}"
 - name: Check that the keystore file exists
   stat:
@@ -33,6 +33,6 @@
   ignore_errors: yes
 - name: Optimize APK
   shell:
-    cmd: "~/Library/Android/sdk/build-tools/26.0.1/zipalign -v 4
+    cmd: "~/Library/Android/sdk/build-tools/28.0.2/zipalign -v 4
     {{platforms.android.unsigned_apk}} {{ app_name }}.apk"
     chdir: "{{PROJECT_PATH}}"

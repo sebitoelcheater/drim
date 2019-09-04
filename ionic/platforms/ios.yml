@@ -1,0 +1,2 @@
+- name: Build App
+  command: ionic cordova build ios --prod

@@ -19,7 +19,7 @@ platforms = {}
 
 app_name = input('Application name: ')
 
-android = input('Include Android? (Y/n): ') in ["", "y"]
+android = input('Include Android? (Y/n): ') in ["", "y", "Y"]
 if android:
     print("Creating keystore...")
     release_keystore_path = "{}/{}-{}".format(project_keys_path, app_name, "release-key.keystore")
@@ -40,11 +40,11 @@ else:
     platforms["android"] = False
 
 
-ios = input('Include iOS? (Y/n)') in ["", "y"]
+ios = input('Include iOS? (Y/n)') in ["", "y", "Y"]
 platforms["ios"] = {
     "present": False
 }
-browser = input('Include Web Browser? (Y/n)') in ["", "y"]
+browser = input('Include Web Browser? (Y/n)') in ["", "y", "Y"]
 if browser:
     print("Enter your production VPS credentials: ")
     platforms["browser"] = {

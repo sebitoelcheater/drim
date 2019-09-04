@@ -5,9 +5,11 @@
   ignore_errors: yes
 - name: Build browser for production
   shell:
-    cmd: "ionic cordova build --release --prod browser"
+    cmd: ng build --prod # Commented because error with facebook plugin "ionic cordova build --release --prod browser"
     chdir: "{{PROJECT_PATH}}"
 - name: Include vars files
   include_vars: "{{PROJECT_PATH}}/.drim/credentials.yml"
+- name: invalidate caché
+  shell: "aws cloudfront create-invalidation --distribution-id {{cloudfront_distribution_id}} --paths \"/*\""
 - name: sync
   shell: "aws s3 sync {{PROJECT_PATH}}/www/ s3://{{platforms.browser.bucket.name}} --delete --acl public-read --profile {{platforms.browser.profile}}"
