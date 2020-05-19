@@ -40,7 +40,7 @@
       authorized_key:
         user: "{{item.name}}"
         state: present
-        key: "{{ lookup('file', '{{hostvars[ansible_host].ansible_ssh_private_key_file}}.pub') }}"
+        key: "{{ lookup('file', '{{PROJECT_PATH}}/{{hostvars[ansible_host].ansible_ssh_private_key_file}}.pub') }}"
       become_user: "{{item.name}}"
       with_items: "{{users}}"
     - name: Add a host for each user to ansible hosts inventory file
