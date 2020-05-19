@@ -28,4 +28,4 @@
     - name: Sync not compressed files
       shell: "aws s3 sync {{PROJECT_PATH}}/dist s3://{{bucket_name}} --acl public-read --profile {{PROFILE}} --include \"*\" --exclude \"*.js\""
     - name: invalidate caché
-      shell: "aws cloudfront create-invalidation --distribution-id {{cloudfront_distribution_id}} --paths \"/*\""
+      shell: "aws cloudfront create-invalidation --distribution-id --profile {{PROFILE}} {{cloudfront_distribution_id}} --paths \"/*\""
