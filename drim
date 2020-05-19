@@ -61,6 +61,8 @@ elif [ "$cloud" == "digitalocean" ]; then
     ansible-playbook $drim_path/digitalocean/sandbox.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   elif [ "$action" == "backup" ]; then
     ansible-playbook $drim_path/digitalocean/backup.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
+  else
+    ansible-playbook $drim_path/digitalocean/$action.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/vars.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path";
   fi
 elif [ "$framework" == "ionic" ]; then
   if [ "$action" == "deploy" ]; then
