@@ -21,7 +21,7 @@
 #      shell: "pg_dump -U {{item.database}}_admin {{item.database}} > ~/backups/database/{{item.database}}/{{datetime.iso8601}}.sql"
 #      with_items: "{{databases.postgresql}}"
     - name: pull
-      command: "git pull origin {{develop}}"
+      command: "git pull origin master"
       args:
         chdir: "{{project_folder}}"
     - name: Install requirements
