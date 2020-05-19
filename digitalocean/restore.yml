@@ -1,0 +1,36 @@
+- name: Set Django project with heroku
+  hosts: digitalocean
+  become: true
+  tasks:
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/vars.yml"
+    - name: Drop old databases
+      become: true
+      shell: "sudo -u postgres psql -c \"DROP DATABASE {{item.database}};\""
+      with_items: "{{databases.postgresql}}"
+    - name: Create database
+      shell: "sudo -u postgres psql -c \"CREATE DATABASE {{item.database}};\""
+      with_items: "{{databases.postgresql}}"
+    - name: Create user and grant privileges on postgresql database
+      command: "sudo -u postgres psql -c \"
+        ALTER ROLE {{item.user}} SET client_encoding TO 'utf8';
+        ALTER ROLE {{item.user}} SET default_transaction_isolation TO 'read committed';
+        ALTER ROLE {{item.user}} SET timezone TO 'UTC';
+        GRANT ALL PRIVILEGES ON DATABASE {{item.database}} TO {{item.user}};\""
+      with_items: "{{databases.postgresql}}"
+    - name: install postgis extension
+      command: "sudo -u postgres psql {{item.database}} -c \"CREATE EXTENSION postgis;\""
+      with_items: "{{databases.postgresql}}"
+    - name: create temporary build directory
+      tempfile:
+        state: directory
+        suffix: backup
+      register: temp_backup
+    - name: Copy backup file
+      copy:
+        src: "{{PROJECT_PATH}}/{{item.backup.path}}/{{item.backup.filename}}"
+        dest: "{{temp_backup.path}}"
+      with_items: "{{databases.postgresql}}"
+    - name: Restore {{item.database}} database
+      shell: "psql -U {{item.user}} {{item.database}} < {{temp_backup.path}}/{{item.backup.filename}}"
+      with_items: "{{databases.postgresql}}"
