@@ -139,7 +139,7 @@ if input('Create DigitalOcean Droplet? (Y/n): ') in ["", "y", "Y"]:
     keys = manager.get_all_sshkeys()
     if len(keys) == 0:
         print('uploading your private key to digitalocean...')
-        user_ssh_key = open("{}/{}".format(PROJECT_PATH, input('Public key path: '))).read()
+        user_ssh_key = open(input('Public key path: ')).read()
         key = SSHKey(token=do_token, name=socket.gethostname(), public_key=user_ssh_key)
         key.create()
         keys = manager.get_all_sshkeys()

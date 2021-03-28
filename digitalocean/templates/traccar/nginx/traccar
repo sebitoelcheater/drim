@@ -1,5 +1,5 @@
 server {
-    server_name {{server_url}};
+    server_name {{traccar.server_url}};
     location = /favicon.ico { access_log off; log_not_found off; }
     location / {
         proxy_set_header        Host                 $host;

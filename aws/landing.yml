@@ -6,13 +6,13 @@
     - "{{VARS_FILE}}"
   tasks:
     - name: Check if hosted zone already exists for that domain
-      command: "aws route53 list-hosted-zones --query 'HostedZones[?Name==`{{domain}}.`].Id'"
+      command: "aws route53 list-hosted-zones --query 'HostedZones[?Name==`{{domain}}.`].Id' --profile {{PROFILE}}"
       register: hosted_zones_result
     - set_fact:
         hosted_zone_already_exists: "{{hosted_zones_result.stdout | from_json | length != 0}}"
     - debug: var=hosted_zone_already_exists
     - name: Create Route 53 Hosted Zone
-      command: aws route53 create-hosted-zone --name {{domain}} --caller-reference {{domain}}_reference
+      command: aws route53 create-hosted-zone --name {{domain}} --caller-reference {{domain}}_reference --profile {{PROFILE}}
       register: create_hosted_zone_result
       when: not(hosted_zone_already_exists)
     - debug: var="create_hosted_zone_result.stdout | from_json"
@@ -25,6 +25,7 @@
         policy: "{{ lookup('template', 's3_read_website_bucket.json.j2') }}"
         state: present
         region: "us-east-1"
+        profile: "{{PROFILE}}"
       with_items: "{{aliases}}"
     - name: Make main bucket static
       s3_website:
@@ -32,11 +33,13 @@
         suffix: index.html
         error_key: index.html
         state: present
+        profile: "{{PROFILE}}"
     - name: Redirect from a domain to another domain
       s3_website:
         name: "{{item}}"
         redirect_all_requests: "{{aliases[0]}}"
         state: present
+        profile: "{{PROFILE}}"
       with_items: "{{aliases[1:]}}"
     - name: Upload home page
       aws_s3:
@@ -44,20 +47,27 @@
         object: /index.html
         src: templates/index.html
         mode: put
+        profile: "{{PROFILE}}"
+      when: true
     - name: Request SSL certificate
-      command: aws acm request-certificate --domain-name {{aliases[0]}} --validation-method DNS {{'--subject-alternative-names' if (aliases | length > 1) else ''}} {{aliases[1:]|join(' ')}}
+      command: aws acm request-certificate --domain-name {{aliases[0]}} --validation-method DNS {{'--subject-alternative-names' if (aliases | length > 1) else ''}} {{aliases[1:]|join(' ')}} --profile {{PROFILE}}
+      when: certificate_arn is not defined
       register: request_certificate_result
     - set_fact:
         ssl_certificate: "{{ request_certificate_result.stdout | from_json }}"
+      when: certificate_arn is not defined
     - set_fact:
         certificate_arn: "{{ssl_certificate.CertificateArn}}"
+      when: certificate_arn is not defined
     - debug: var=ssl_certificate
+      when: certificate_arn is not defined
     - name: Wait certificate request creation
       pause:
         seconds: 20
     - name: obtain all facts for a single ACM certificate
       aws_acm_facts:
         domain_name: "{{aliases[0]}}"
+        profile: "{{PROFILE}}"
       register: ssl_certificates
     - debug: var=ssl_certificates.certificates
     - name: Add a CNAME record for certificates DNS validation and wait changes to replicate
@@ -69,10 +79,12 @@
         ttl: 30
         value: "{{item.resource_record.value}}"
         wait: yes
+        profile: "{{PROFILE}}"
       with_items: "{{ssl_certificates.certificates[0].domain_validation_options}}"
     - name: Wait until the certificate pass DNS validation
       aws_acm_facts:
         domain_name: "{{aliases[0]}}"
+        profile: "{{PROFILE}}"
       register: ssl_certificates
       retries: 9000
       delay: 30
@@ -132,6 +144,7 @@
         http_version: http2
         ipv6_enabled: yes
         comment: this is a cloudfront distribution with logging
+        profile: "{{PROFILE}}"
     - name: Output result diff
       debug:
         var: cloudfront_website_distribution.diff
@@ -175,4 +188,5 @@
         alias_hosted_zone_id: "{{ cloudfront_hosted_zone_id }}"
         state: present
         wait: yes
+        profile: "{{PROFILE}}"
       with_items: "{{aliases}}"

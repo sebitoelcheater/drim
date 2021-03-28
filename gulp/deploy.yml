@@ -1,0 +1,15 @@
+- name: Deploy Glup project to AWS S3
+  hosts: localhost
+  vars:
+    backup: false
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks:
+    - name: Build project for production
+      shell:
+        cmd: "npm build"
+        chdir: "{{PROJECT_PATH}}"
+    - name: Sync all files
+      shell: "aws s3 sync {{PROJECT_PATH}}/dist s3://{{bucket_name}} --acl public-read --profile {{PROFILE}} --include \"*\""
+    - name: invalidate caché
+      shell: "aws cloudfront create-invalidation --distribution-id --profile {{PROFILE}} {{cloudfront_distribution_id}} --paths \"/*\""

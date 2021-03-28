@@ -18,8 +18,8 @@
     - "{{PROJECT_PATH}}/.drim/vars.yml"
   tasks:
     - name: Add certbot repository
-      command: add-apt-repository ppa:certbot/certbot
-      become: true
+      apt_repository:
+        repo: 'ppa:certbot/certbot'
     - name: Update
       shell: apt-get update
     - name:
@@ -29,10 +29,6 @@
   roles:
     - role: geerlingguy.mysql
 - name: Install traccar
-  vars:
-    traccar:
-      url: https://github.com/traccar/traccar/releases/download/v4.2/traccar-linux-64-4.2.zip
-      zip_filename: traccar-linux-64-4.2.zip
   hosts: digitalocean
   vars_files:
     - "{{PROJECT_PATH}}/.drim/vars.yml"
@@ -47,7 +43,7 @@
     - name: Create traccar.xml config file
       become: true
       template:
-        src: "templates/traccar/traccar.xml.template"
+        src: "templates/traccar/traccar.postgres.xml.template"
         dest: "/opt/traccar/conf/traccar.xml"
     - name: Creates directory
       become: true
@@ -64,14 +60,14 @@
       become: true
       template:
         src: "templates/traccar/nginx/traccar"
-        dest: "/etc/nginx/sites-available/{{server_url}}"
+        dest: "/etc/nginx/sites-available/{{traccar.server_url}}"
     - name: Create nginx default file
       become: true
       template:
         src: "templates/traccar/nginx/default"
         dest: "/etc/nginx/sites-available/default"
     - name: Symlink new nginx server block
-      command: "ln -s /etc/nginx/sites-available/{{server_url}} /etc/nginx/sites-enabled/"
+      command: "ln -s /etc/nginx/sites-available/{{traccar.server_url}} /etc/nginx/sites-enabled/"
       become: true
     - name: enable traccar service
       systemd:
@@ -94,7 +90,7 @@
       command: ufw delete allow 'Nginx HTTP'
       become: true
     - name: Obtain an SSL Certificate
-      command: certbot --nginx -d {{server_url}} -m {{certbot.email}} --agree-to --non-interactive --redirect
+      command: certbot --nginx -d {{traccar.server_url}} -m {{certbot.email}} --agree-to --non-interactive --redirect
       become: true
     - name: Verify Certbot Auto-Renewal
       command: certbot renew --dry-run

@@ -1,0 +1,19 @@
+- name: Deploy expo project to expo server or playstore, depending on develop or production
+  hosts: localhost
+  vars:
+    backup: false
+  vars_files:
+    - "{{VARS_FILE}}"
+  tasks:
+    - debug: var=ENVIRONMENT
+    - name: Build project for production
+      environment: "{{environment_vars}}"
+      shell:
+        cmd: "npm run build"
+        chdir: "{{PROJECT_PATH}}"
+    - name: Include vars files
+      include_vars: "{{PROJECT_PATH}}/.drim/credentials.yml"
+    - name: invalidate caché
+      shell: "aws cloudfront create-invalidation --distribution-id {{cloudfront_distribution_id}} --paths \"/*\""
+    - name: sync
+      shell: "aws s3 sync {{PROJECT_PATH}}/build s3://{{bucket_name}} --delete --acl public-read --profile {{PROFILE}}"

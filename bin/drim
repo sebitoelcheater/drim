@@ -76,7 +76,7 @@ elif [ "$cloud" == "aws" ]; then
   if [ "$framework" == "wordpress" ]; then
     ansible-playbook $drim_path/aws/wordpress/$action.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/$environment.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml";
   else
-    ansible-playbook $drim_path/aws/$action.yml -i .drim/hosts.yml --extra-vars "$project_path/.drim/$environment.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml";
+    ansible-playbook $drim_path/aws/$action.yml -i .drim/hosts.yml --extra-vars "@$project_path/.drim/$environment.yml" --extra-vars "DRIM_PATH=$drim_path inventory_file=$project_path/.drim/hosts.yml PROJECT_PATH=$project_path ENVIRONMENT=$environment VARS_FILE=$project_path/.drim/$environment.yml";
   fi
 elif [ "$framework" == "angular" ]; then
   if [ "$action" == "deploy" ]; then
